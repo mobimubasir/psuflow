@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title data-i18n="my_appointments_title"><%= title || "My Appointments - PSUFlow" %></title>
+
+  <!-- i18n loader must be first so translations are ready for inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <link rel="stylesheet" href="/css/myappointments.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    body { transition: direction .2s ease; }
+    .muted { color:#666; }
+    .badge{ padding:4px 10px; border-radius:12px; color:#fff; font-size:12px; margin-left:6px; }
+    .waiting{ background:#f4b400; }
+    .in-progress{ background:#1e90ff; }
+    .completed, .confirmed{ background:#34a853; }
+    .canceled{ background:#e74c3c; }
+    .rescheduled{ background:#8e44ad; }
+    .btn-group{ margin-top:8px; display:flex; gap:8px; }
+    .btn-group button{ padding:6px 10px; border:0; border-radius:8px; cursor:pointer; }
+    .reschedule-btn{ background:#0ea5e9; color:#fff; }
+    .cancel-btn{ background:#ef4444; color:#fff; }
+    .toolbar{ display:flex; align-items:center; gap:10px; margin:6px 0 18px; }
+    .toolbar label{ font-weight:600; }
+    .toolbar select{ padding:6px 8px; border-radius:8px; border:1px solid #ddd; }
+    body[dir="rtl"] .toolbar label { margin-left: 0; }
+
+    /* Layout: stack vertically */
+    .main-content { display:flex !important; flex-direction:column !important; gap:24px !important; }
+    .main-content .section { width:100% !important; float:none !important; clear:both !important; }
+
+    /* Responsive grids */
+    #currentWrap, #previousGrid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap:16px;
+    }
+
+    /* Updates card */
+    .updates { border:1px solid #e7eef8; border-radius:12px; padding:16px; background:#fff; }
+    .updates h2 { margin-top:0; }
+    .updates-list{ list-style:none; padding-left:0; margin:8px 0 0;}
+    .updates-list li{
+      display:flex; align-items:flex-start; gap:8px;
+      padding:8px 10px; border:1px solid #e7eef8; border-radius:10px; margin-bottom:8px;
+      background:#fbfdff;
+    }
+    .updates-list li.unread{ border-color:#1a73e8; box-shadow:0 0 0 2px rgba(26,115,232,.08) inset; }
+    .updates-list .time{ font-size:12px; color:#667; margin-left:auto; white-space:nowrap; }
+
+    /* Toast (simple inline feedback) */
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      background: #1a73e8; color: #fff; padding: 10px 14px; border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 14px; display: none; z-index: 9;
+    }
+    .toast.show { display:block; }
+    /* ==========================
+   PSUFlow — Unified Sidebar
+   (apply on ALL pages)
+   ========================== */
+
+/* Container uses flex so sidebar + content align horizontally */
+.container{
+  display:flex;               /* ensure horizontal layout */
+  min-height:100vh;           /* full page height */
+}
+
+/* Main content should flex to fill remaining space */
+.main-content{
+  flex:1;
+  padding:20px;               /* feel free to tune per page */
+}
+
+/* Sidebar — gradient, vertical layout */
+.sidebar{
+  width:300px;
+  background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+  color:#fff;
+  padding:20px 0;
+  height:100vh;               /* full viewport height */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  position:sticky;            /* stays in view on scroll */
+  top:0;
+}
+
+/* Logo spacing */
+.sidebar .logo{ width:120px; margin-bottom:30px; }
+
+/* Support both `.nav` and `nav > ul` */
+.sidebar .nav,
+.sidebar nav ul{
+  list-style:none;
+  padding:0;
+  margin:0;
+  width:100%;
+}
+
+/* List items */
+.sidebar .nav li,
+.sidebar nav ul li{
+  padding:12px 30px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+}
+
+/* Links inside the sidebar */
+.sidebar a{
+  text-decoration:none;
+  color:#fff;
+  display:block;
+  width:100%;
+  margin:10px 0;
+  padding:10px 12px;
+  border-radius:8px;
+  transition: background .3s, transform .06s ease;
+  line-height:1.25;           /* allows two-line labels cleanly */
+  white-space:normal;
+  word-break:break-word;
+}
+
+/* Hover states on li and link (both supported) */
+.sidebar .nav li:hover,
+.sidebar nav ul li:hover{
+  background-color: rgba(255,255,255,0.10);
+}
+.sidebar a:hover{
+  background-color: rgba(255,255,255,0.18);
+  transform: translateY(1px);
+}
+
+/* Active/current page link */
+.sidebar a.active{
+  background-color: rgba(255,255,255,0.22);
+  font-weight:700;
+}
+
+/* Icon alignment stays tidy even when text wraps */
+.sidebar a i{ min-width:18px; }
+
+/* Logout button — support both classes */
+.logout,
+.logout-btn{
+  margin-top:auto;
+  margin-bottom:20px;
+  padding:10px 20px;
+  background-color:#fff;
+  color:#1e60ff;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:700;
+  transition: filter .2s ease, transform .06s ease;
+}
+.logout:hover,
+.logout-btn:hover{
+  background-color:#f0f0f0;
+}
+.logout:active,
+.logout-btn:active{
+  transform: translateY(1px);
+}
+
+/* RTL support */
+html[dir="rtl"] .sidebar .nav li,
+html[dir="rtl"] .sidebar nav ul li{
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .sidebar a i{
+  min-width:18px;
+}
+
+/* Mobile: stack layout; sidebar becomes natural height */
+@media (max-width: 980px){
+  .container{ flex-direction:column; }
+  .sidebar{
+    width:100%;
+    height:auto;
+    position:relative;
+  }
+}
+/* ==========================
+   PSUFlow — Language Switch Styling
+   ========================== */
+
+#langSwitch {
+  width: 60%;
+  padding: 10px 14px;
+  margin: 12px auto 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.05s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  backdrop-filter: blur(4px);
+}
+
+/* Hover / focus states */
+#langSwitch:hover,
+#langSwitch:focus {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.8);
+  transform: translateY(1px);
+}
+
+/* Dropdown arrow styling */
+#langSwitch option {
+  color: #1e60ff;   /* makes dropdown text readable when opened */
+  background: #fff; /* consistent dropdown menu color */
+  font-weight: 600;
+}
+
+/* RTL language alignment fix */
+html[dir="rtl"] #langSwitch {
+  text-align: right;
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <select id="langSwitch" style="margin:8px; border-radius:6px;">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <ul class="nav">
+        <li><a href="/studentdashboard"><i class="fas fa-home"></i> <span data-i18n="dashboard">Dashboard</span></a></li>
+        <li><a href="/bookappointment"><i class="fas fa-calendar-plus"></i> <span data-i18n="book_appointment">Book Appointment</span></a></li>
+        <li><a class="active" href="/myappointments"><i class="fas fa-calendar-check"></i> <span data-i18n="my_appointments_title">My Appointments</span></a></li>
+      </ul>
+      <button class="logout" id="logoutBtn" data-i18n="logout_button">Logout</button>
+    </aside>
+
+    <main class="main-content">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo"/>
+      <h1>PSU<span class="highlight">Flow</span> <span data-i18n="my_appointments_title">My Appointments</span></h1>
+
+      <!-- ST-US9: Status filter -->
+      <div class="toolbar">
+        <label for="statusFilter" data-i18n="filter_by_status">Filter by status:</label>
+        <select id="statusFilter"></select>
+      </div>
+
+      <div class="section">
+        <h2 data-i18n="current_upcoming">Current / Upcoming</h2>
+        <div id="currentWrap">
+          <div class="appointment current" id="currentEmpty">
+            <p class="muted" data-i18n="no_upcoming">No upcoming appointments yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 data-i18n="previous_appointments">Previous Appointments</h2>
+        <div class="appointment-grid" id="previousGrid"></div>
+      </div>
+
+      <!-- Status Updates for this student -->
+      <div class="section updates" id="updatesSection">
+        <h2><i class="fa fa-bell"></i> <span data-i18n="updates">Updates</span></h2>
+        <ul id="updatesList" class="updates-list">
+          <li class="muted" data-i18n="no_updates">No updates yet</li>
+        </ul>
+        <div class="small muted" id="updatesFoot"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Tiny toast -->
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  /* ---------- i18n boot ---------- */
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+      buildStatusFilter();
+      renderLists();
+      if (window.__lastNotifList) renderUpdates(window.__lastNotifList);
+    }
+  });
+  const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  const currentWrap   = document.getElementById("currentWrap");
+  const currentEmpty  = document.getElementById("currentEmpty");
+  const prevGrid      = document.getElementById("previousGrid");
+  const statusFilter  = document.getElementById("statusFilter");
+  const updatesListEl = document.getElementById("updatesList");
+  const updatesFootEl = document.getElementById("updatesFoot");
+
+  /* ---------- Helpers ---------- */
+  function showToast(msg, ok=true){
+    const tEl=document.getElementById("toast");
+    tEl.textContent=msg; tEl.style.background = ok ? "#1a73e8" : "#b00020";
+    tEl.classList.add("show"); setTimeout(()=>tEl.classList.remove("show"), 2200);
+  }
+  const toDateObj = (iso,time)=> new Date(`${iso} ${time||"00:00"}`);
+  const niceLongDate = iso => {
+    try {
+      const d = new Date(iso+"T00:00:00");
+      return d.toLocaleDateString(document.documentElement.lang || undefined,
+        {month:"short",day:"numeric",year:"numeric"});
+    }catch{ return iso; }
+  };
+  const isInFutureOrToday = (iso,time)=>{
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = toDateObj(iso,time);
+    return d >= now;
+  };
+
+  // NEW: auto-mark past appointments as COMPLETED in the UI
+  function normalizeStatus(status, date, time){
+    const raw = (status || "").toUpperCase();
+
+    // If today or future, keep original (or default to WAITING)
+    if (isInFutureOrToday(date, time)) {
+      return raw || "WAITING";
+    }
+
+    // Date has passed: if it was still pending-like, show as COMPLETED
+    if (!raw ||
+        raw === "WAITING" ||
+        raw === "PENDING" ||
+        raw.includes("PROGRESS") ||
+        raw === "APPROVED") {
+      return "COMPLETED";
+    }
+
+    // For CANCELED / REJECTED / RESCHEDULED etc., keep original
+    return raw;
+  }
+
+  function statusBadge(statusRaw){
+    const s=(statusRaw||"").toUpperCase();
+    const span=document.createElement("span");
+    let cls="waiting", text=t("waiting","Waiting");
+    if(s.includes("PROGRESS")){cls="in-progress";text=t("in_progress","In Progress");}
+    else if(s.includes("COMPLETE")||s.includes("CONFIRM")||s==="APPROVED"){cls="completed";text=(s==="APPROVED"?t("approved","Approved"):t("completed","Completed"));}
+    else if(s.includes("CANCEL")||s==="REJECTED"){cls="canceled";text=(s==="REJECTED"?t("rejected","Rejected"):t("canceled","Canceled"));}
+    else if(s.includes("RESCHED")){cls="rescheduled";text=t("rescheduled","Rescheduled");}
+    span.className="badge "+cls; span.textContent=text;
+    return span;
+  }
+
+  /* ---------- Appointment Card ---------- */
+  function card(a){
+    const wrap=document.createElement("div"); wrap.className="appointment";
+    wrap.innerHTML=`<p><strong>${niceLongDate(a.date)}</strong></p>
+                    <p>${a.time||"—"}</p><p>${a.dept||"—"}</p>`;
+    wrap.appendChild(statusBadge(a.status));
+    if(isInFutureOrToday(a.date,a.time)){
+      const grp=document.createElement("div"); grp.className="btn-group";
+      const r=document.createElement("button");
+      r.className="reschedule-btn"; r.textContent=t("reschedule","Reschedule");
+      r.onclick=()=>handleReschedule(a.id,a.date,a.time);
+      const c=document.createElement("button");
+      c.className="cancel-btn"; c.textContent=t("cancel","Cancel");
+      c.onclick=()=>handleCancel(a.id,a.date,a.time);
+      grp.append(r,c); wrap.appendChild(grp);
+    }
+    return wrap;
+  }
+
+  /* ---------- Actions ---------- */
+  async function handleCancel(id,date,time){
+    if(!confirm(t("confirm_cancel","Are you sure you want to cancel this appointment?"))) return;
+    try{
+      const url=id?`/appointments/cancel/${id}`:"/appointments/cancel";
+      const opt=id?{method:"POST"}:{method:"POST",headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({studentId:user.id,date,time})};
+      const res=await fetch(url,opt);
+      if(!res.ok) throw 0;
+      alert(t("canceled_success","Appointment canceled successfully!"));
+      loadFromAPI();
+      setTimeout(loadNotifications, 250);
+    }catch{ alert(t("canceled_failed","Failed to cancel. Please try again.")); }
+  }
+  const handleReschedule=(id,d,tme)=>{
+    const q=new URLSearchParams(); if(id)q.set("reschedule",id);
+    if(d)q.set("date",d); if(tme)q.set("time",tme);
+    location.href=`/bookappointment?${q.toString()}`;
+  };
+
+  /* ---------- Local fallback ---------- */
+  function ensureUpcomingFromLocal(){
+    const raw=localStorage.getItem("upcomingAppointment");
+    if(!raw) return false;
+    try{
+      const a=JSON.parse(raw);
+      if(!a?.date||!isInFutureOrToday(a.date,a.time)) return false;
+      const c=card({date:a.date,time:a.time,dept:a.dept,status:"WAITING"});
+      c.classList.add("current"); if(currentEmpty) currentEmpty.remove();
+      currentWrap.prepend(c); return true;
+    }catch{return false;}
+  }
+
+  /* ---------- Fetch + render ---------- */
+  let allAppointments=[];
+  function renderLists(){
+    const filter=(statusFilter.value||"").toUpperCase();
+    const filt=allAppointments.filter(a=>!filter||(a.status||"").toUpperCase().includes(filter));
+    const future=filt.filter(a=>isInFutureOrToday(a.date,a.time))
+                     .sort((x,y)=>toDateObj(x.date,x.time)-toDateObj(y.date,y.time));
+    const past=filt.filter(a=>!isInFutureOrToday(a.date,a.time))
+                   .sort((x,y)=>toDateObj(y.date,y.time)-toDateObj(x.date,x.time));
+
+    currentWrap.innerHTML="";
+    if(!future.length && !ensureUpcomingFromLocal()){
+      const d=document.createElement("div");
+      d.className="appointment current";
+      d.innerHTML=`<p class="muted">${t("no_upcoming","No upcoming appointments yet.")}</p>`;
+      currentWrap.appendChild(d);
+    }else future.forEach(a=>{const c=card(a);c.classList.add("current");currentWrap.appendChild(c);});
+
+    prevGrid.innerHTML="";
+    if(!past.length){
+      const d=document.createElement("div");
+      d.className="appointment";
+      d.innerHTML=`<p class="muted">${t("no_previous","No previous appointments yet.")}</p>`;
+      prevGrid.appendChild(d);
+    }else past.forEach(a=>prevGrid.appendChild(card(a)));
+  }
+
+  async function loadFromAPI(){
+    if(!user?.id) return;
+    try{
+      const r=await fetch(`/appointments/my/${user.id}`);
+      if(!r.ok) throw 0;
+      const data=await r.json();
+      allAppointments=(Array.isArray(data)?data:[]).map(a=>{
+        let d=a.date,tme=a.time;
+        if(!d&&a.start_at){
+          const D=new Date(a.start_at);
+          d=D.toISOString().slice(0,10);
+          try{tme=D.toLocaleTimeString(document.documentElement.lang);}catch{}
+        }
+
+        const normalizedStatus = normalizeStatus(a.status, d, tme);
+
+        return{
+          id:a.id,
+          date:d,
+          time:tme,
+          dept:a.category||"—",
+          status: normalizedStatus
+        };
+      });
+      renderLists();
+    }catch{
+      if(!ensureUpcomingFromLocal())
+        currentWrap.innerHTML=`<p class="muted">${t("load_failed","Could not load appointments.")}</p>`;
+    }
+  }
+
+  /* ---------- Filter ---------- */
+  function buildStatusFilter(){
+    const opts=[
+      {v:"",l:t("all","All")},
+      {v:"WAITING",l:t("waiting","Waiting")},
+      {v:"IN_PROGRESS",l:t("in_progress","In Progress")},
+      {v:"COMPLETED",l:t("completed","Completed")},
+      {v:"CANCELED",l:t("canceled","Canceled")},
+      {v:"RESCHEDULED",l:t("rescheduled","Rescheduled")}
+    ];
+    const cur=statusFilter.value||"";
+    statusFilter.innerHTML="";
+    opts.forEach(o=>{
+      const op=document.createElement("option");
+      op.value=o.v;op.textContent=o.l;if(o.v===cur)op.selected=true;
+      statusFilter.appendChild(op);
+    });
+  }
+
+  /* ---------- Updates / Notifications panel (i18n-aware) ---------- */
+
+// Map literal titles from API to i18n keys.
+function titleKeyFromLiteral(s){
+  if (!s) return null;
+  const key = s.toLowerCase().trim();
+  const map = {
+    "appointment approved": "appointment_approved",
+    "appointment rejected": "appointment_rejected",
+    "appointment rescheduled": "appointment_rescheduled",
+    "appointment pending": "appointment_pending"
+  };
+  return map[key] || null;
+}
+
+// Try to parse the common English body pattern to {category,date,time}
+function parseBodyVars(body){
+  // Example body we saw:
+  // "Your advising on 2025-10-22 at 12:00 PM was rejected"
+  // "Your registration on 2025-10-06 at 12:00 PM was approved"
+  const m = /^\.?Your\s+(.+?)\s+on\s+(\d{4}-\d{2}-\d{2})\s+at\s+(.+?)\s+was\s+(approved|rejected|rescheduled|pending)\.?$/i.exec((body||"").trim());
+  if (!m) return null;
+  return { category: m[1], date: m[2], time: m[3], verdict: m[4].toLowerCase() };
+}
+
+// Get the i18n template key for a verdict
+function bodyTemplateKey(verdict){
+  switch((verdict||"").toLowerCase()){
+    case "approved":     return "notif_body_template_approved";
+    case "rejected":     return "notif_body_template_rejected";
+    case "rescheduled":  return "notif_body_template_rescheduled";
+    case "pending":      return "notif_body_template_pending";
+    default:             return null;
+  }
+}
+
+// Interpolate {var} placeholders inside an i18n string
+function i18nFormat(key, fallback, vars){
+  const base = t(key, fallback);
+  if (!vars) return base;
+  return base
+    .replace("{category}", vars.category ?? "")
+    .replace("{date}",     vars.date ?? "")
+    .replace("{time}",     vars.time ?? "");
+}
+
+function translateUpdateItem(n){
+  // Title
+  const litKey = titleKeyFromLiteral(n.title);
+  const title  = litKey ? t(litKey, n.title) : (n.title || t("update","Update"));
+
+  // Body
+  const parsed = parseBodyVars(n.body);
+  if (parsed){
+    const templKey = bodyTemplateKey(parsed.verdict);
+    if (templKey){
+      return {
+        title,
+        body: i18nFormat(templKey, n.body, parsed)
+      };
+    }
+  }
+  // Fallback: keep original body (already works if backend supplies localized body)
+  return { title, body: n.body || "" };
+}
+
+function renderUpdates(list){
+  window.__lastNotifList = list;
+  updatesListEl.innerHTML = "";
+  if (!list.length){
+    updatesListEl.innerHTML = `<li class="muted">${t("no_updates","No updates yet")}</li>`;
+    updatesFootEl.textContent = "";
+    return;
+  }
+
+  list.forEach(n=>{
+    const { title, body } = translateUpdateItem(n);
+    const li = document.createElement("li");
+    if (!n.read) li.classList.add("unread");
+    li.innerHTML = `
+      <div>
+        <strong>${title}</strong>
+        <div class="small">${body}</div>
+      </div>
+      <span class="time">${new Date(n.createdAt || Date.now())
+        .toLocaleString(document.documentElement.lang || undefined)}</span>
+    `;
+    updatesListEl.appendChild(li);
+  });
+
+  updatesFootEl.textContent = t("tip_click_row","Tip: Newest updates appear first.");
+}
+
+
+  async function loadNotifications(){
+    if (!user?.id) return;
+    try{
+      const res = await fetch(`/notifications/user/${user.id}`);
+      if (!res.ok) return;
+      const list = await res.json();
+      list.sort((a,b)=>
+        (new Date(b.createdAt||0)).getTime() - (new Date(a.createdAt||0)).getTime()
+      );
+      renderUpdates(list);
+
+      const firstUnread = list.find(n => !n.read);
+      if (firstUnread){
+        const key = `myappts-notif:${firstUnread.id}`;
+        if (!localStorage.getItem(key)){
+          showToast((firstUnread.title||t("update","Update")) + ": " + (firstUnread.body||""));
+          localStorage.setItem(key, new Date().toISOString().slice(0,10));
+        }
+      }
+    }catch(e){ /*silent*/ }
+  }
+
+  /* ---------- Events ---------- */
+  statusFilter.addEventListener("change",renderLists);
+  document.getElementById("logoutBtn").addEventListener("click",()=>{
+    localStorage.removeItem("user");location.href="/login";
+  });
+
+  /* ---------- First paint + polling ---------- */
+  (async()=>{
+    if(i18nReady?.then){try{await i18nReady;}catch{}}
+    if(window.PSUi18n){PSUi18n.apply(document);
+      const active=PSUi18n.getLang?.()||"en";
+      document.getElementById("langSwitch").value=active;
+      document.documentElement.lang=active;
+      document.documentElement.dir=(active==="ar")?"rtl":"ltr";
+    }
+    buildStatusFilter();
+    await Promise.all([loadFromAPI(), loadNotifications()]);
+    setInterval(async ()=>{
+      await Promise.all([loadFromAPI(), loadNotifications()]);
+    }, 60 * 1000);
+  })();
+})();
+</script>
+
+</body>
+</html>

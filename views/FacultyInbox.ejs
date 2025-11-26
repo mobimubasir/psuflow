@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title data-i18n="faculty_inbox_title"><%= title || "PSUFlow Faculty Inbox" %></title>
+
+  <!-- i18n loader MUST be before the inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #eaf3fb; }
+
+    /* ===== Layout wrapper: Sidebar + Main ===== */
+    .container{
+      display:flex;
+      min-height:100vh;
+    }
+
+    /* ===== Sidebar (unified across PSUFlow) ===== */
+    .sidebar{
+      width:300px;
+      background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+      color:#fff;
+      padding:20px 0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      position:sticky;
+      top:0;
+    }
+
+    /* Support .nav, nav ul, or plain ul */
+    .sidebar .nav,
+    .sidebar nav ul,
+    .sidebar > ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      width:100%;
+    }
+    .sidebar .nav li,
+    .sidebar nav ul li,
+    .sidebar > ul > li{
+      padding:12px 30px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      cursor:pointer;
+    }
+    .sidebar a{
+      text-decoration:none;
+      color:#fff;
+      display:block;
+      width:100%;
+      margin:10px 0;
+      padding:10px 12px;
+      border-radius:8px;
+      transition: background .3s, transform .06s ease;
+      line-height:1.25;
+      white-space:normal;
+      word-break:break-word;
+    }
+    .sidebar .nav li:hover,
+    .sidebar nav ul li:hover,
+    .sidebar > ul > li:hover{
+      background-color: rgba(255,255,255,0.10);
+    }
+    .sidebar a:hover{
+      background-color: rgba(255,255,255,0.18);
+      transform: translateY(1px);
+    }
+    .sidebar a.active{
+      background-color: rgba(255,255,255,0.22);
+      font-weight:700;
+    }
+    .sidebar a i{ min-width:18px; }
+
+    /* Logout — unified button look */
+    .logout,
+    .logout-btn{
+      margin-top:auto;
+      margin-bottom:20px;
+      padding:10px 20px;
+      background-color:#fff;
+      color:#1e60ff;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      transition: filter .2s ease, transform .06s ease, background .2s ease;
+    }
+    .logout:hover,
+    .logout-btn:hover{ background-color:#f0f0f0; }
+    .logout:active,
+    .logout-btn:active{ transform: translateY(1px); }
+
+    /* ===== Language Switch (frosted) ===== */
+    #langSwitch {
+      width: 85%;
+      padding: 10px 14px;
+      margin: 12px auto 24px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.05s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      backdrop-filter: blur(4px);
+    }
+    #langSwitch:hover,
+    #langSwitch:focus {
+      background: rgba(255,255,255,0.25);
+      border-color: rgba(255,255,255,0.8);
+      transform: translateY(1px);
+    }
+    #langSwitch option {
+      color: #1e60ff;
+      background: #fff;
+      font-weight: 600;
+    }
+    html[dir="rtl"] #langSwitch { text-align: right; }
+
+    /* ===== Main content ===== */
+    .main { flex-grow: 1; padding: 40px; }
+    .main .logo{ width: 120px; margin-bottom: 30px; display:block; }
+    h1 { margin-bottom: 30px; color: #1a1a1a; }
+    h1 .blue { color:#1a73e8; }
+
+    /* ===== Inbox message cards ===== */
+    .message-box {
+      background:#fff; border-radius:10px; padding:18px 22px;
+      margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;
+      box-shadow:0 1px 3px rgba(0,0,0,0.1); font-size:18px;
+    }
+    .message-info { max-width: 80%; }
+    .label { font-weight:700; margin-right:6px; }
+    .meta { display:block; margin-top:4px; color:#222; }
+    .message-date { color:#555; font-size:16px; background:#f2f4f7; padding:8px 14px; border-radius:8px; }
+
+    /* Badges */
+    .badge { font-size:12px; padding:4px 10px; border-radius:12px; margin-left:8px; color:#fff; vertical-align:middle; }
+    .badge.waiting { background:#a0aec0; }
+    .badge.confirmed { background:#34a853; }
+    .badge.in-progress { background:#f4b400; }
+
+    .category-tag {
+      display:inline-block; margin-top:6px; padding:3px 8px; font-size:13px;
+      background:#eaf3fb; border-radius:6px; color:#333;
+    }
+    .muted { color:#666; }
+
+    /* RTL tweaks for list alignment */
+    html[dir="rtl"] .sidebar .nav li,
+    html[dir="rtl"] .sidebar nav ul li,
+    html[dir="rtl"] .sidebar > ul > li{ flex-direction: row-reverse; }
+    html[dir="rtl"] .sidebar a i{ min-width:18px; }
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .container{ flex-direction:column; }
+      .sidebar{
+        width:100%;
+        height:auto;
+        position:relative;
+      }
+      .main{ padding:24px 16px 56px; }
+      .message-info{ max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <select id="langSwitch">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <ul>
+        <li><a href="/facultydashboard" data-i18n="dashboard">Dashboard</a></li>
+        <li><a href="/facultyappointment" data-i18n="appointments">Appointments</a></li>
+        <li><a class="active" href="/facultyinbox" data-i18n="inbox">Inbox</a></li>
+      </ul>
+
+      <button class="logout" id="logoutBtn" data-i18n="logout_button">Logout</button>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo" />
+      <h1>PSU<span class="blue">Flow</span> <span data-i18n="faculty_inbox_title">Faculty Inbox</span></h1>
+
+      <div id="inboxContainer">
+        <!-- Placeholder shown until data loads -->
+        <div class="message-box" id="placeholder">
+          <div class="message-info">
+            <span class="label muted" data-i18n="loading">Loading…</span>
+            <span class="meta muted" data-i18n="please_wait">Please wait</span>
+          </div>
+          <div class="message-date">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  /* ---------- i18n boot ---------- */
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+    }
+  });
+
+  const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const inboxContainer = document.getElementById('inboxContainer');
+
+  function fmtDay(iso){
+    try {
+      const d=new Date(iso+'T00:00:00');
+      return d.toLocaleDateString(document.documentElement.lang || undefined,{month:'short',day:'numeric'});
+    } catch { return iso; }
+  }
+
+  function badge(status){
+    const s=document.createElement('span');
+    let cls='waiting', txt=t('waiting','Waiting');
+    if(/confirm|complete/i.test(status)){ cls='confirmed'; txt=t('confirmed','Confirmed'); }
+    else if(/progress/i.test(status)){ cls='in-progress'; txt=t('in_progress','In Progress'); }
+    s.className='badge '+cls; s.textContent=txt; return s;
+  }
+
+  function makeCard({ studentName, dateISO, timeLabel, category, status }){
+    const wrap=document.createElement('div'); wrap.className='message-box'; wrap.setAttribute('role','group');
+    const left=document.createElement('div'); left.className='message-info';
+
+    const line1=document.createElement('div');
+    line1.innerHTML=`<span class="label">${t('student','Student')}:</span>${studentName || '—'} `;
+    line1.appendChild(badge(status));
+
+    const line2=document.createElement('div'); line2.className='meta';
+    line2.textContent=`${t('date','Date')}: ${dateISO ? fmtDay(dateISO) : '—'}  •  ${t('time','Time')}: ${timeLabel || '—'}`;
+
+    const line3=document.createElement('div'); line3.className='meta';
+    line3.innerHTML = `${t('category','Category')}: <span class="category-tag">${category || '—'}</span>`;
+
+    left.append(line1,line2,line3);
+
+    const right=document.createElement('div'); right.className='message-date';
+    right.textContent = dateISO ? fmtDay(dateISO) : '—';
+
+    wrap.append(left,right);
+    return wrap;
+  }
+
+  async function loadInbox(){
+    if(!user?.id || user.role!=='faculty'){
+      inboxContainer.innerHTML='';
+      inboxContainer.appendChild(makeCard({
+        studentName: t('login_required','Please login as faculty.'),
+        category: t('inbox_hint','Inbox items will show here'),
+        status: 'waiting'
+      }));
+      return;
+    }
+    try{
+      const res=await fetch(`/appointments/upcoming/${user.id}`);
+      const ok=res.ok;
+      const data=ok?await res.json():[];
+
+      inboxContainer.innerHTML='';
+      if(!ok || !Array.isArray(data) || data.length===0){
+        inboxContainer.appendChild(makeCard({
+          studentName: t('no_recent_activity','No recent activity'),
+          category: t('inbox_hint','New items will appear here'),
+          status:'waiting'
+        }));
+        return;
+      }
+
+      data
+        .sort((a,b)=> (a.date > b.date ? -1 : 1))
+        .slice(0,20)
+        .forEach(a=> inboxContainer.appendChild(makeCard({
+          studentName: a.student?.name || a.student?.username || t('student','Student'),
+          dateISO: a.date,
+          timeLabel: a.time,
+          category: a.category || a.reason || '',
+          status: a.status || 'waiting'
+        })));
+    }catch(e){
+      console.error(e);
+      inboxContainer.innerHTML='';
+      inboxContainer.appendChild(makeCard({
+        studentName:t('network_error','Network error'),
+        category:t('please_try_again','Please try again'),
+        status:'waiting'
+      }));
+    }
+  }
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', ()=>{
+    localStorage.removeItem('user'); location.href='/login';
+  });
+
+  // Language change: set the language, apply translations, rebuild cards
+  document.getElementById('langSwitch').addEventListener('change', (e)=>{
+    if (window.PSUi18n){
+      PSUi18n.setLang(e.target.value);
+      PSUi18n.apply(document.body);
+    }
+    loadInbox();
+  });
+
+  (async () => {
+    if (i18nReady?.then) { try { await i18nReady; } catch {} }
+    if (window.PSUi18n) PSUi18n.apply(document.body);
+    await loadInbox();
+  })();
+})();
+</script>
+</body>
+</html>

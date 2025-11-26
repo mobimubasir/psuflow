@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title data-i18n="faculty_dashboard_title">PSUFlow Faculty Dashboard</title>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif; }
+    body { margin: 0; background-color: #eaf3fb; }
+
+    .container{ display:flex; min-height:100vh; }
+    .main{ flex:1; padding:40px 40px 80px; position:relative; }
+    .main img.logo { width:120px; margin-bottom:20px; display:block; }
+    .main h1{ margin-bottom:6px; color:#1a1a1a; }
+    .main h1 .blue{ color:#1a73e8; }
+    .subtext{ font-size:18px; margin:0 0 24px; color:#444; }
+
+    .sidebar{
+      width:300px;
+      background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+      color:#fff;
+      padding:20px 0;
+      height:100vh;
+      display:flex; flex-direction:column; align-items:center;
+      position:sticky; top:0;
+    }
+    .sidebar .logo{ width:120px; margin-bottom:30px; }
+
+    .sidebar .nav, .sidebar nav ul, .sidebar > ul{ list-style:none; padding:0; margin:0; width:100%; }
+    .sidebar .nav li, .sidebar nav ul li, .sidebar > ul > li{
+      padding:12px 30px; display:flex; align-items:center; gap:10px; cursor:pointer;
+    }
+    .sidebar a{
+      text-decoration:none; color:#fff; display:block; width:100%;
+      margin:10px 0; padding:10px 12px; border-radius:8px;
+      transition: background .3s, transform .06s ease;
+      line-height:1.25; white-space:normal; word-break:break-word;
+    }
+    .sidebar .nav li:hover, .sidebar nav ul li:hover, .sidebar > ul > li:hover{ background-color: rgba(255,255,255,0.10); }
+    .sidebar a:hover{ background-color: rgba(255,255,255,0.18); transform: translateY(1px); }
+    .sidebar a.active{ background-color: rgba(255,255,255,0.22); font-weight:700; }
+    .sidebar a i{ min-width:18px; }
+
+    .logout, .logout-btn{
+      margin-top:auto; margin-bottom:20px; padding:10px 20px;
+      background-color:#fff; color:#1e60ff; border:none; border-radius:8px; cursor:pointer;
+      font-weight:700; transition: filter .2s ease, transform .06s ease, background .2s ease;
+    }
+    .logout:hover, .logout-btn:hover{ background-color:#f0f0f0; }
+    .logout:active, .logout-btn:active{ transform: translateY(1px); }
+
+    html[dir="rtl"] .sidebar .nav li,
+    html[dir="rtl"] .sidebar nav ul li,
+    html[dir="rtl"] .sidebar > ul > li{ flex-direction: row-reverse; }
+    html[dir="rtl"] .sidebar a i{ min-width:18px; }
+
+    @media (max-width: 980px){
+      .container{ flex-direction:column; }
+      .sidebar{ width:100%; height:auto; position:relative; }
+      .main{ padding:24px 16px 56px; }
+    }
+
+    #langSwitch {
+      width: 85%; padding: 10px 14px; margin: 12px auto 24px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15);
+      color: #fff; font-weight: 600; font-size: 15px; text-align: center; cursor: pointer; outline: none;
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.05s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); backdrop-filter: blur(4px);
+    }
+    #langSwitch:hover, #langSwitch:focus { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.8); transform: translateY(1px); }
+    #langSwitch option { color: #1e60ff; background: #fff; font-weight: 600; }
+    html[dir="rtl"] #langSwitch { text-align: right; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    th, td { text-align: left; padding: 14px 16px; }
+    html[dir="rtl"] th, html[dir="rtl"] td { text-align:right; }
+    th { background-color: #f0f4f8; color:#0f172a; font-weight:700; }
+    td { color:#1f2937; }
+
+    .panel { background:#fff; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,.08); padding:16px; margin: 22px 0; }
+    .panel h3{ margin:0 0 12px; color:#1a1a1a; }
+    .block-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .block-row input[type="date"], .block-row select { padding:8px 10px; border:1px solid #d7dfe9; border-radius:8px; background:#f9fbff; font-size:14px; }
+
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; color: white; }
+    .waiting   { background:#f4b400; }
+    .confirmed { background:#34a853; }
+    .badge.rejected { background:#c62828; }
+    .badge.rescheduled { background:#6b7280; }
+
+    .blocked-list { margin-top:12px; }
+    .blocked-item {
+      display:flex; align-items:center; justify-content:space-between;
+      background:#f7fafc; border:1px solid #e5edf6; border-radius:10px; padding:10px 12px; margin-bottom:8px;
+    }
+
+    .filters { position: absolute; top: 40px; right: 680px; text-align:center; }
+    .filters > * { display:block; margin-bottom:10px; }
+    .filters .chip { display:inline-flex; align-items:center; gap:6px; background:#ffffff; border:1px solid #e5edf6; border-radius:999px; padding:6px 10px; }
+    .filters select, .filters input[type="checkbox"] { margin-left: 6px; }
+
+    .btn{
+      appearance:none; border:0; cursor:pointer; padding:9px 14px; border-radius:10px; font-weight:700;
+      transition:transform .06s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+      box-shadow:0 1px 2px rgba(0,0,0,.06); display:inline-flex; align-items:center; gap:8px; font-size:14px;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn.primary{ background:#1a73e8; color:#fff; } .btn.primary:hover{ background:#1669cf; }
+    .btn.gray{ background:#fff; color:#1a73e8; border:2px solid #1a73e8; } .btn.gray:hover{ background:#eef5ff; color:#155fc2; border-color:#155fc2; }
+    .btn.danger{ background:#e74c3c; color:#fff; } .btn.danger:hover{ background:#c0392b; }
+    .btn.secondary{ background:#6b7280; color:#fff; } .btn.secondary:hover{ background:#4b5563; }
+
+    .filters button{ all: unset; display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; border:2px solid #1a73e8; color:#1a73e8; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+    .filters button:hover{ background:#eef5ff; color:#155fc2; border-color:#155fc2; }
+
+    .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #1a73e8; color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:14px; display:none; z-index: 5; }
+    .toast.show{ display:block; }
+
+    .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 40; }
+    .modal { width: min(760px, 92vw); background: #fff; border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.28); overflow: hidden; }
+    .modal header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#1a73e8; color:#fff; }
+    .modal .content { padding: 16px; }
+    .note-thread { border:1px solid #e5edf6; border-radius:10px; max-height: 260px; overflow:auto; padding:10px; background:#f9fbff; margin-bottom:12px; white-space: pre-wrap; }
+    .note-meta { color:#6b7280; font-size:12px; }
+    textarea.note-input { width: 100%; min-height: 90px; padding:10px; border:1px solid #cfd8e3; border-radius:10px; resize:vertical; font-family: inherit; }
+    .modal footer { display:flex; justify-content:flex-end; gap:8px; padding: 12px 16px; background:#fafafa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <select id="langSwitch">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <ul>
+        <li><a class="active" href="/facultydashboard"><span data-i18n="dashboard">Dashboard</span></a></li>
+        <li><a href="/facultyappointment"><span data-i18n="appointments">Appointments</span></a></li>
+        <li><a href="/facultyinbox"><span data-i18n="inbox">Inbox</span></a></li>
+      </ul>
+
+      <button class="logout" id="logoutBtn"><span data-i18n="logout_button">Logout</span></button>
+    </div>
+
+    <!-- Main content -->
+    <div class="main">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo" />
+      <h1>PSU<span class="blue">Flow</span> <span data-i18n="faculty_dashboard_title">Faculty Dashboard</span></h1>
+      <div class="subtext" id="greeting" data-i18n="good_afternoon">Good Afternoon</div>
+
+      <!-- FC-US3: Block a time slot -->
+      <div class="panel" id="blockPanel">
+        <h3 data-i18n="block_time_slot">Block a time slot</h3>
+        <div class="block-row">
+          <label for="blockDate" data-i18n="date_label">Date:</label>
+          <input type="date" id="blockDate" aria-labelledby="blockDate">
+          <label for="blockTime" data-i18n="time_label">Time:</label>
+          <select id="blockTime" aria-labelledby="blockTime">
+            <option>12:00 PM</option>
+            <option>12:15 PM</option>
+            <option>12:30 PM</option>
+            <option>12:45 PM</option>
+          </select>
+          <button class="btn danger" id="blockBtn" data-i18n="block_button">Block</button>
+        </div>
+        <div class="blocked-list" id="blockedList"></div>
+      </div>
+
+      <h2 data-i18n="upcoming_appointments">Upcoming Appointments</h2>
+      <table id="faculty-appointments">
+        <thead>
+          <tr>
+            <th data-i18n="th_student_name">Student Name</th>
+            <th data-i18n="th_date">Date</th>
+            <th data-i18n="th_time">Time</th>
+            <th data-i18n="th_category">Category</th>
+            <th data-i18n="th_status">Status</th>
+            <th data-i18n="th_actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Filters panel -->
+    <div class="filters">
+      <label class="chip">
+        <input type="checkbox" id="academicOnlyChk"/> <span data-i18n="academic_only">Academic only</span>
+      </label>
+      <label class="chip">
+        <span data-i18n="category_label">Category:</span>
+        <select id="categoryFilter">
+          <option value="all" data-i18n="all">All</option>
+        </select>
+      </label>
+
+      <label class="chip" title="Show all pending (WAITING) requests for your category" data-i18n-title="pending_my_cat_tip">
+        <input type="checkbox" id="pendingMyCatChk"/> <span data-i18n="pending_in_my_category">Pending in my category</span>
+        <span class="muted" id="myCatLabel" style="margin-left:6px;"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Notes modal -->
+  <div class="backdrop" id="noteBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
+      <header>
+        <h4 id="noteTitle" data-i18n="appointment_notes">Appointment notes</h4>
+        <button class="btn gray" id="closeNote" data-i18n="close">Close</button>
+      </header>
+      <div class="content">
+        <div class="note-thread" id="noteThread" data-i18n="loading">Loading…</div>
+        <div class="note-meta" id="noteMeta"></div>
+        <textarea class="note-input" id="noteInput"
+          placeholder="Write a note for this appointment…" 
+          data-i18n-placeholder="note_placeholder"></textarea>
+      </div>
+      <footer>
+        <button class="btn gray" id="cancelNote" data-i18n="cancel">Cancel</button>
+        <button class="btn primary" id="saveNote" data-i18n="save_note">Save Notes</button>
+      </footer>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- i18n loader MUST come before the inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <script>
+(function(){
+  // --- i18n boot ---
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+    }
+  });
+
+  const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb||k));
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  // --- DOM refs ---
+  const tbody = document.querySelector("#faculty-appointments tbody");
+  const academicOnlyChk = document.getElementById("academicOnlyChk");
+  const categoryFilter  = document.getElementById("categoryFilter");
+  const pendingMyCatChk = document.getElementById("pendingMyCatChk");
+  const myCatLabel      = document.getElementById("myCatLabel");
+
+  const blockDate   = document.getElementById("blockDate");
+  const blockTime   = document.getElementById("blockTime");
+  const blockBtn    = document.getElementById("blockBtn");
+  const blockedList = document.getElementById("blockedList");
+  const toast       = document.getElementById("toast");
+
+  // Modal elements
+  const noteBackdrop = document.getElementById("noteBackdrop");
+  const noteThread   = document.getElementById("noteThread");
+  const noteMeta     = document.getElementById("noteMeta");
+  const noteInput    = document.getElementById("noteInput");
+  const saveNoteBtn  = document.getElementById("saveNote");
+  const closeNoteBtn = document.getElementById("closeNote");
+  const cancelNoteBtn= document.getElementById("cancelNote");
+
+  let activeAppt = null;
+  let categoriesCache = [];
+
+  // --- helpers ---
+  function getMyCategory(){
+    return (user && (user.category || user.staffCategory)) || categoriesCache[0] || null;
+  }
+
+  function timeGreeting(){
+    const h = new Date().getHours();
+    if (h < 12) return t("good_morning","Good Morning");
+    if (h < 17) return t("good_afternoon","Good Afternoon");
+    return t("good_evening","Good Evening");
+  }
+  function renderGreeting(){
+    const g = document.getElementById("greeting");
+    g.textContent = user?.name ? `${timeGreeting()}, ${user.name}` : timeGreeting();
+  }
+  renderGreeting();
+
+  function showToast(msg, ok=true){
+    toast.textContent = msg;
+    toast.style.background = ok ? "#1a73e8" : "#b00020";
+    toast.classList.add("show");
+    setTimeout(()=>toast.classList.remove("show"), 2000);
+  }
+
+  // parse "12:30 PM" / "14:30" into {h,m}
+  function parseTimeParts(str){
+    if (!str) return null;
+    const s = String(str).trim().toUpperCase();
+    let ampm = null;
+    let core = s;
+    if (s.endsWith("AM") || s.endsWith("PM")) {
+      ampm = s.slice(-2);
+      core = s.slice(0, -2).trim();
+    }
+    const parts = core.split(":");
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1] || "0", 10);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return {h, m};
+  }
+
+  function makeAppointmentDate(dateISO, timeStr){
+    if (!dateISO || !timeStr) return null;
+    const tp = parseTimeParts(timeStr);
+    if (!tp) return null;
+    const [y, mo, d] = dateISO.split("-").map(n => parseInt(n, 10));
+    if (!y || !mo || !d) return null;
+    return new Date(y, mo - 1, d, tp.h, tp.m, 0, 0);
+  }
+
+  function hasAppointmentPassed(appt){
+    if (!appt?.date || !appt?.time) return false;
+    const dt = makeAppointmentDate(appt.date, appt.time);
+    if (!dt) return false;
+    return dt.getTime() < Date.now();
+  }
+
+  function badge(statusRaw){
+    const s = String(statusRaw || '').toUpperCase();
+    const span = document.createElement('span');
+    span.classList.add('badge');
+
+    if (s === 'COMPLETED') {
+      span.classList.add('confirmed');
+      span.textContent = t("completed","Complete");
+    } else if (s === 'APPROVED' || s === 'CONFIRMED') {
+      span.classList.add('confirmed');
+      span.textContent = t("approved","Approved");
+    } else if (s === 'REJECTED' || s === 'CANCELED') {
+      span.classList.add('rejected');
+      span.textContent = (s === 'REJECTED' ? t("rejected","Rejected") : t("canceled","Canceled"));
+    } else if (s === 'RESCHEDULED') {
+      span.classList.add('rescheduled');
+      span.textContent = t("rescheduled","Rescheduled");
+    } else {
+      span.classList.add('waiting');
+      span.textContent = t("waiting","Waiting");
+    }
+    return span;
+  }
+
+  function row(cells){
+    const tr = document.createElement("tr");
+    cells.forEach(c => {
+      const td = document.createElement("td");
+      if (c instanceof Node) td.appendChild(c); else td.textContent = c;
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+  function niceDate(iso){
+    try { return new Date(iso + "T00:00:00").toLocaleDateString(document.documentElement.lang || undefined, { month:"short", day:"numeric" }); }
+    catch { return iso; }
+  }
+
+  function isMine(a){
+    if (!user) return false;
+    const myId = String(user.id || "");
+    const fid = a.facultyId ?? a.faculty_id ?? (a.faculty && a.faculty.id);
+    if (fid != null && myId) {
+      if (String(fid) === myId) return true;
+    }
+    const myName = (user.name || user.username || "").trim().toLowerCase();
+    const apptFacultyName = (a.faculty?.name || a.facultyName || a.faculty?.username || "").trim().toLowerCase();
+    if (myName && apptFacultyName) {
+      return myName.includes(apptFacultyName) || apptFacultyName.includes(myName);
+    }
+    return false;
+  }
+
+  // --- data loaders ---
+  async function loadCategories(){
+    if (!user?.id) return;
+    try{
+      const res = await fetch(`/appointments/categories/${user.id}`);
+      const list = res.ok ? await res.json() : [];
+      categoriesCache = Array.isArray(list) ? list : [];
+      categoryFilter.innerHTML = `<option value="all">${t("all","All")}</option>`;
+      categoriesCache.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat; opt.textContent = cat.replace(/-/g,' ');
+        categoryFilter.appendChild(opt);
+      });
+
+      const mc = getMyCategory();
+      myCatLabel.textContent = mc ? `(${mc})` : "";
+    }catch(e){ console.error("categories error", e); }
+  }
+
+  async function decide(apptId, decision){
+    if (!user?.id) return showToast(t("not_signed_in","Not signed in"), false);
+
+    if (!confirm((decision==="APPROVED" ? t("confirm_approve","Approve this booking?") : t("confirm_reject","Reject this booking?"))))
+      return;
+
+    try{
+      const res = await fetch(`/appointments/${apptId}/decide`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ facultyId: user.id, decision })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error || t("action_failed","Action failed");
+        showToast(msg, false);
+        await loadUpcoming();
+        return;
+      }
+      showToast(data.message || t("saved","Saved"));
+      await loadUpcoming();
+    } catch(e){
+      console.error(e);
+      showToast(t("network_error","Network error"), false);
+    }
+  }
+
+  async function loadUpcoming(){
+    if (!user?.id) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">${t("login_required","Please login as faculty.")}</td></tr>`;
+      return;
+    }
+    try{
+      const params = new URLSearchParams();
+
+      if (pendingMyCatChk.checked) {
+        const myCat = getMyCategory();
+        if (myCat) {
+          params.set("status","WAITING");
+          params.set("category", myCat);
+        } else {
+          if (academicOnlyChk.checked) params.set("onlyAcademic", "true");
+          const cat = categoryFilter.value;
+          if (cat && cat !== "all") params.set("category", cat);
+        }
+      } else {
+        if (academicOnlyChk.checked) params.set("onlyAcademic", "true");
+        const cat = categoryFilter.value;
+        if (cat && cat !== "all") params.set("category", cat);
+      }
+
+      const res = await fetch(`/appointments/upcoming/${user.id}?` + params.toString());
+      const data = res.ok ? await res.json() : [];
+
+      const mine = Array.isArray(data) ? data.filter(isMine) : [];
+      tbody.innerHTML = "";
+      if (!Array.isArray(mine) || mine.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="muted">${t("no_appointments","No upcoming appointments.")}</td></tr>`;
+        return;
+      }
+
+      mine.forEach(a => {
+        const studentName = a.student?.name || a.student?.username || "—";
+
+        // auto-complete if time has passed
+        let currentStatus = (a.status || "WAITING").toString().toUpperCase();
+        if (hasAppointmentPassed(a) && (currentStatus === "WAITING" || currentStatus === "APPROVED" || currentStatus === "CONFIRMED")) {
+          currentStatus = "COMPLETED";
+        }
+
+        const statusCell  = badge(currentStatus);
+        const isWaiting   = currentStatus === 'WAITING';
+
+        const noteBtn = document.createElement("button");
+        noteBtn.className = "btn gray";
+        noteBtn.textContent = t("note","Note");
+        noteBtn.style.marginRight = "6px";
+        noteBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openNotes({
+            id: a.id, studentName, date: a.date, time: a.time, category: a.category
+          });
+        });
+
+        const approveBtn = document.createElement("button");
+        approveBtn.className = "btn primary";
+        approveBtn.textContent = t("approve","Approve");
+        approveBtn.disabled = !isWaiting;
+        approveBtn.style.marginRight = "6px";
+        approveBtn.addEventListener("click", () => decide(a.id, "APPROVED"));
+
+        const rejectBtn = document.createElement("button");
+        rejectBtn.className = "btn danger";
+        rejectBtn.textContent = t("reject","Reject");
+        rejectBtn.disabled = !isWaiting;
+        rejectBtn.addEventListener("click", () => decide(a.id, "REJECTED"));
+
+        const actions = document.createElement("div");
+        actions.appendChild(noteBtn);
+        actions.appendChild(approveBtn);
+        actions.appendChild(rejectBtn);
+
+        tbody.appendChild(row([
+          studentName,
+          niceDate(a.date),
+          a.time || "—",
+          a.category || "—",
+          statusCell,
+          actions
+        ]));
+      });
+
+    } catch (e) {
+      console.error("loadUpcoming error", e);
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">${t("error_loading","Could not load appointments.")}</td></tr>`;
+    }
+  }
+
+  // --- modal open/close ---
+  function openBackdrop(){ noteBackdrop.style.display = "flex"; noteBackdrop.setAttribute("aria-hidden","false"); }
+  function closeBackdrop(){ noteBackdrop.style.display = "none"; noteBackdrop.setAttribute("aria-hidden","true"); }
+
+  async function openNotes(appt){
+    activeAppt = appt;
+    document.getElementById("noteTitle").textContent =
+      `${t("appointment_notes","Appointment notes")} — ${appt.studentName} · ${niceDate(appt.date)} ${appt.time || ""}`;
+    noteThread.textContent = t("loading","Loading…");
+    noteMeta.textContent = "";
+    noteInput.value = "";
+    openBackdrop();
+
+    let noteText = "";
+    try {
+      let res = await fetch(`/appointments/${appt.id}/note`);
+      if (!res.ok) {
+        res = await fetch(`/appointments/${appt.id}`);
+        if (res.ok) {
+          const j = await res.json();
+          noteText = (j.notes || j.note || "").toString();
+        }
+      } else {
+        const j = await res.json();
+        noteText = (j.note || "").toString();
+      }
+    } catch {}
+
+    noteThread.textContent = noteText || t("no_notes","No notes yet — be the first to leave one.");
+    if (noteText) noteThread.scrollTop = noteThread.scrollHeight;
+    const who = user?.name || t("you","You");
+    noteMeta.textContent = `${t("logged_in_as","Logged in as")}: ${who}`;
+  }
+
+  // --- Save note (returns boolean) ---
+  async function saveNote(){
+    if (!activeAppt?.id) return false;
+    const text = (noteInput.value || "").trim();
+    if (!text) {
+      showToast(t("write_before_saving","Write something before saving"), false);
+      return false;
+    }
+
+    const stamp = new Date().toLocaleString();
+    const who = user?.name || t("faculty","Faculty");
+    const line = `[${stamp}] ${who}: ${text}`;
+    const emptyMsg = t("no_notes","No notes yet — be the first to leave one.");
+    const existing = (noteThread.textContent === emptyMsg) ? "" : noteThread.textContent;
+    const joined = existing ? (existing + "\n" + line) : line;
+
+    let ok = false;
+    try {
+      const res = await fetch(`/appointments/${activeAppt.id}/note`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ facultyId: user?.id, text: joined })
+      });
+      if (res.ok) {
+        ok = true;
+      } else {
+        const res2 = await fetch(`/appointments/comment/${activeAppt.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ facultyId: user?.id, text: line })
+        });
+        ok = res2.ok;
+        if (ok) {
+          try {
+            const ref = await fetch(`/appointments/${activeAppt.id}/note`);
+            if (ref.ok) {
+              const j = await ref.json();
+              noteThread.textContent = (j.note || "").toString();
+            }
+          } catch {}
+        }
+      }
+    } catch(e){ console.error(e); }
+
+    if (ok) {
+      if (noteThread.textContent.indexOf(line) === -1) {
+        noteThread.textContent = joined;
+        noteThread.scrollTop = noteThread.scrollHeight;
+      }
+      noteInput.value = "";
+      showToast(t("note_saved","Note saved"));
+      return true;
+    } else {
+      showToast(t("save_failed","Failed to save note"), false);
+      return false;
+    }
+  }
+
+  // --- wire modal buttons/backdrop/esc ---
+  closeNoteBtn.addEventListener("click", closeBackdrop);
+  cancelNoteBtn.addEventListener("click", closeBackdrop);
+  noteBackdrop.addEventListener("click", (e) => {
+    if (e.target === noteBackdrop) closeBackdrop();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && noteBackdrop.getAttribute("aria-hidden") === "false") {
+      closeBackdrop();
+    }
+  });
+  saveNoteBtn.addEventListener("click", async () => {
+    const ok = await saveNote();
+    if (ok) closeBackdrop();
+  });
+
+  // --- blocked slots ---
+  async function loadBlockedFor(dateISO){
+    blockedList.innerHTML = "";
+    if (!user?.id || !dateISO) {
+      blockedList.innerHTML = `<div class="muted">${t("pick_date_hint","Pick a date to see blocked slots.")}</div>`;
+      return;
+    }
+    try {
+      const res = await fetch(`/faculty/blocks?facultyId=${user.id}&date=${encodeURIComponent(dateISO)}`);
+      if (!res.ok) {
+        blockedList.innerHTML = `<div class="muted">${t("blocked_unavailable","Blocked list unavailable.")}</div>`;
+        return;
+      }
+      const arr = await res.json();
+      if (!Array.isArray(arr) || arr.length === 0) {
+        blockedList.innerHTML = `<div class="muted">${t("no_blocked","No blocked slots for this date.")}</div>`;
+        return;
+      }
+      arr
+        .sort((a,b)=> (a.time || "").localeCompare(b.time || ""))
+        .forEach(b => {
+          const item = document.createElement("div");
+          item.className = "blocked-item";
+          item.innerHTML = `<strong>${b.time}</strong> <span class="muted">${b.reason || ""}</span>`;
+          const unBtn = document.createElement("button");
+          unBtn.className = "btn gray";
+          unBtn.textContent = t("unblock","Unblock");
+          unBtn.addEventListener("click", ()=> doUnblock(dateISO, b.time));
+          item.appendChild(unBtn);
+          blockedList.appendChild(item);
+        });
+    } catch (e) {
+      console.error(e);
+      blockedList.innerHTML = `<div class="muted">${t("blocked_failed","Failed to load blocked slots.")}</div>`;
+    }
+  }
+
+  async function doBlock(){
+    const dateISO = blockDate.value;
+    const time = blockTime.value;
+    if (!user?.id) return showToast(t("not_signed_in","Not signed in"), false);
+    if (!dateISO || !time) return showToast(t("pick_date_time","Pick date & time"), false);
+    try{
+      const res = await fetch("/faculty/block", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ facultyId: user.id, date: dateISO, time })
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.error || t("block_failed","Failed to block"), false);
+      showToast(t("time_blocked","Time blocked"));
+      await loadBlockedFor(dateISO);
+    }catch(e){
+      console.error(e);
+      showToast(t("network_error","Network error"), false);
+    }
+  }
+
+  async function doUnblock(dateISO, time){
+    try{
+      const res = await fetch("/faculty/blocks", {
+        method:"DELETE",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ facultyId: user.id, date: dateISO, time })
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.error || t("unblock_failed","Failed to unblock"), false);
+      showToast(t("unblocked","Unblocked"));
+      await loadBlockedFor(dateISO);
+    }catch(e){
+      console.error(e);
+      showToast(t("network_error","Network error"), false);
+    }
+  }
+
+  // --- listeners ---
+  const today = new Date();
+  blockDate.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+  blockBtn.addEventListener("click", doBlock);
+  blockDate.addEventListener("change", ()=> loadBlockedFor(blockDate.value));
+  academicOnlyChk.addEventListener("change", loadUpcoming);
+  categoryFilter.addEventListener("change", ()=> {
+    if (pendingMyCatChk.checked) pendingMyCatChk.checked = false;
+    loadUpcoming();
+  });
+  pendingMyCatChk.addEventListener("change", ()=>{
+    const locked = pendingMyCatChk.checked;
+    const mc = getMyCategory();
+    if (locked && mc) {
+      Array.from(categoryFilter.options).forEach(o => o.selected = (o.value === mc));
+      categoryFilter.disabled = true;
+      academicOnlyChk.disabled = true;
+    } else {
+      categoryFilter.disabled = false;
+      academicOnlyChk.disabled = false;
+    }
+    loadUpcoming();
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("user");
+    location.href = "/login";
+  });
+
+  document.getElementById("langSwitch")?.addEventListener("change", async (e)=>{
+    if (window.PSUi18n){
+      await PSUi18n.setLang(e.target.value);
+      PSUi18n.apply(document.body);
+    }
+    renderGreeting();
+    await loadCategories();
+    await loadUpcoming();
+    await loadBlockedFor(blockDate.value);
+  });
+
+  // --- boot ---
+  (async () => {
+    if (i18nReady?.then) { try { await i18nReady; } catch {} }
+    if (window.PSUi18n) PSUi18n.apply(document.body);
+    await loadCategories();
+    await loadUpcoming();
+    await loadBlockedFor(blockDate.value);
+  })();
+})();
+  </script>
+
+</body>
+</html>

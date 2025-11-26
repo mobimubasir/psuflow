@@ -1,0 +1,144 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #e9f1f8;
+  }
+  
+  .container {
+    display: flex;
+    height: 100vh;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    background: linear-gradient(to bottom, #0d6efd, #115AA4);
+    color: white;
+    width: 240px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+  }
+   
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+  .sidebar-logo {
+    width: 60px;
+    margin-bottom: 20px;
+  }
+  
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .sidebar ul li {
+    padding: 12px 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+ 
+  .sidebar ul li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .logout-btn {
+    margin-top: auto;
+    padding: 10px;
+    background-color: white;
+    color: #0d6efd;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .logout-btn:hover {
+    background-color: #f0f0f0;
+  }
+  
+  /* Main Content */
+  .main-content {
+    flex: 1;
+    padding: 30px;
+  }
+  
+  /* Header */
+  .dashboard-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+  
+  .dashboard-logo {
+    width: 40px;
+    height: auto;
+  }
+  
+  h1 {
+    font-size: 28px;
+    margin: 0;
+  }
+  
+  .blue {
+    color: #0d6efd;
+  }
+  
+  /* Cards */
+  .cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .card {
+    background-color: #f5f8fd;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    
+  }
+  
+  .card h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  
+  .card p {
+    margin: 6px 0;
+  }
+ /* ===== Queue Card Styles (ST-US4) ===== */
+#queue-card {
+  background-color: #eaf3ff;       /* light blue background to differentiate */
+  border-left: 5px solid #0d6efd; /* accent left border */
+}
+
+#queue-card h3 {
+  color: #0d6efd; /* make the heading consistent with theme blue */
+}
+
+#queue-card .status {
+  font-weight: bold;
+  margin-top: 8px;
+  font-size: 16px;
+  color: #333;
+}
+
+#queue-dept {
+  font-style: italic;
+  color: #555;
+}

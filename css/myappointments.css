@@ -1,0 +1,320 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #e8f2fc;
+  }
+  
+  .container {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 230px;
+    background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+    color: white;
+    padding: 20px 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+   
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+  
+  .logo {
+    width: 120px;
+    margin-bottom: 30px;
+  }
+  
+  .nav {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+  }
+  
+  .nav li a {
+    padding: 12px 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  
+  .nav li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .logout {
+    margin-top: auto;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background-color: white;
+    color: #1e60ff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .logout:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .main-content {
+    flex: 1;
+    padding: 40px;
+  }
+  
+  .main-content h1 {
+    font-size: 26px;
+    margin-bottom: 30px;
+  }
+  
+  .highlight {
+    color: #1e60ff;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+  }
+  
+  .section h2 {
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  .appointment {
+    background-color: #cde1f7;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    width: 250px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+  
+  .appointment-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .current {
+    background-color: #bfd5ec;
+
+
+  }
+  .nav li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+/* New code for ST-US2 */
+.appointment .btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.appointment .cancel-btn,
+.appointment .reschedule-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.appointment .cancel-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.appointment .cancel-btn:hover {
+    background-color: #c0392b;
+}
+
+.appointment .reschedule-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.appointment .reschedule-btn:hover {
+    background-color: #2980b9;
+}
+/* New code for ST-US9 */
+.appointment .badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.appointment .waiting {
+    background-color: #f39c12;
+}
+
+.appointment .in-progress {
+    background-color: #3498db;
+}
+
+.appointment .confirmed {
+    background-color: #2ecc71;
+}
+/* body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #e8f2fc;
+  }
+  
+  .container {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 230px;
+    background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+    color: white;
+    padding: 20px 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+   
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+  
+  .logo {
+    width: 120px;
+    margin-bottom: 30px;
+  }
+  
+  .nav {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+  }
+  
+  .nav li a {
+    padding: 12px 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  
+  .nav li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .logout {
+    margin-top: auto;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background-color: white;
+    color: #1e60ff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .logout:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .main-content {
+    flex: 1;
+    padding: 40px;
+  }
+  
+  .main-content h1 {
+    font-size: 26px;
+    margin-bottom: 30px;
+  }
+  
+  .highlight {
+    color: #1e60ff;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+  }
+  
+  .section h2 {
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  .appointment {
+    background-color: #cde1f7;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    width: 250px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+  
+  .appointment-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .current {
+    background-color: #bfd5ec;
+  }
+  .nav li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  } */
+
+  /* Status badge styles for ST-US9 */
+.appointment .badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.appointment .waiting {
+    background-color: #f39c12; /* orange */
+}
+
+.appointment .in-progress {
+    background-color: #3498db; /* blue */
+}
+
+.appointment .confirmed {
+    background-color: #2ecc71; /* green */
+}
+
+.appointment .completed {
+    background-color: #27ae60; /* darker green for completed */
+}
+
+.appointment .canceled {
+    background-color: #e74c3c; /* red */
+}
+
+.appointment .rescheduled {
+    background-color: #9b59b6; /* purple */
+}

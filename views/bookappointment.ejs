@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="book_appointment"><%= title || "Book Appointment - PSUFlow" %></title>
+
+  <!-- Load i18n first -->
+  <script src="/js/i18n.js"></script>
+
+  <link rel="stylesheet" href="/css/bookappointment.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .slot[disabled]{ opacity:.5; cursor:not-allowed; }
+    .slot.available{ border:2px solid #2ecc71; }
+    .slot.full{ border:2px solid #e74c3c; }
+    .day.selected, .slot.selected{ outline:2px solid #4b7bec; }
+    .notice{ font-size:18px; line-height:1.5; background:#1a73e8; color:#fff;
+      padding:16px 20px; border-radius:10px; margin:12px 0; box-shadow:0 2px 6px rgba(0,0,0,.15);}
+    .notice.notice-error{ background:#b00020;}
+    .notice.notice-success{ background:#198754;}
+    .notice .title{ display:block; font-weight:700; margin-bottom:4px;}
+    .notice .meta{ display:block; opacity:.95; white-space:pre-line;}
+    .select-category{ margin-bottom:20px;}
+    .attachments-section{ margin:20px 0; padding:20px; background:#f5f8fd;
+      border-radius:12px; box-shadow:0 2px 5px rgba(0,0,0,0.05);}
+    .attachments-section h4{ margin:0 0 15px; color:#333;}
+    .attachments-placeholder{ padding:10px; border:1px dashed #ccc;
+      border-radius:8px; text-align:center;}
+    .attachments-placeholder p.muted{ margin:0;}
+    .file-input-group{ margin-bottom:15px;}
+    .file-input-group label{ font-weight:bold; display:block; margin-bottom:5px;}
+    .file-input-group input[type="file"]{ width:100%; padding:8px; border:1px solid #ddd;
+      border-radius:5px; background:#fff;}
+    .queue-status{ margin:15px 0; padding:12px; background:#fff7e6; border:1px solid #f0ad4e;
+      border-radius:8px; font-size:15px; color:#333;}
+    .queue-status strong{ color:#d9534f; }
+
+    /* Reason field */
+    .reason-section{ margin:20px 0; }
+    .reason-section label{ display:block; font-weight:700; margin-bottom:6px; }
+    #reason{ width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; }
+    #reasonCounter{ font-size:12px; margin-top:6px; color:#666; }
+ /* ====== Sidebar ====== */
+    .sidebar{
+      width:300px; background: linear-gradient(to bottom, #1e90ff, #1e60ff); color:#fff;
+      padding:20px 0; height:100vh; display:flex; flex-direction:column; align-items:center;
+      position:sticky; top:0;
+    }
+    .sidebar a{ text-decoration:none; color:#fff; display:block; width:100%;
+      margin:10px 0; padding:10px 12px; border-radius:8px; transition: background .3s, transform .06s ease; }
+    .sidebar a:hover{ background-color: rgba(255,255,255,0.18); transform: translateY(1px); }
+    .sidebar a.active{ background-color: rgba(255,255,255,0.22); font-weight:700; }
+    .logout-btn{
+      margin-top:auto; margin-bottom:20px; padding:10px 20px; background-color:#fff; color:#1e60ff;
+      border:none; border-radius:8px; cursor:pointer; font-weight:700;
+    }
+
+    /* ====== Language Switch ====== */
+    #langSwitch {
+      width: 85%; padding: 10px 14px; margin: 12px auto 24px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15);
+      color: #fff; font-weight: 600; font-size: 15px; text-align: center; cursor: pointer; outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); backdrop-filter: blur(4px);
+    }
+    html[dir="rtl"] #langSwitch { text-align: right; }
+    /* small RTL helpers */
+    body.rtl .booking-grid { direction: rtl; }
+    body.rtl .sidebar { text-align: right; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <select id="langSwitch" style="margin:8px; border-radius:6px;">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <ul class="nav">
+        <li><a href="/studentdashboard"><i class="fas fa-home"></i> <span data-i18n="student_dashboard_title">Dashboard</span></a></li>
+        <li><a class="active" href="/bookappointment"><i class="fas fa-calendar-plus"></i> <span data-i18n="book_appointment">Book Appointment</span></a></li>
+        <li><a href="/myappointments"><i class="fas fa-calendar-check"></i> <span data-i18n="my_appointments">My Appointments</span></a></li>
+      </ul>
+      <button class="logout" id="logoutBtn" data-i18n="logout_button">Logout</button>
+    </aside>
+
+    <main class="main-content">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo" />
+      <h1><span data-i18n="book_appointment">Book Appointment</span></h1>
+
+      <div id="notice" class="notice" hidden></div>
+
+      <!-- Category -->
+      <div class="select-category">
+        <label for="category" data-i18n="select_category">Select appointment category</label>
+        <select id="category">
+          <option value="advising" data-i18n="advising">Academic Advising</option>
+          <option value="registration" data-i18n="registration">Registration</option>
+          <option value="financial" data-i18n="financial">Financial</option>
+          <option value="senior-project" data-i18n="senior_project">Senior Project</option>
+        </select>
+      </div>
+
+      <!-- Person -->
+      <div class="select-person">
+        <label for="person" data-i18n="select_person">Select whom you want to meet</label>
+
+        <% /* ---------- HARD-CODED mapping by faculty names ----------
+             Edit here if you want a different mapping:
+             - "reem"   -> "advising"
+             - "suad"   -> "financial"
+             - "basmah" -> "senior-project"
+             - (registration currently unmapped to faculty)
+        ------------------------------------------------------------- */ %>
+        <% function facultyCatByName(name){
+             const n = (name||"").toLowerCase();
+             if (n.includes("reem"))   return "advising";
+             if (n.includes("suad"))   return "financial";
+             if (n.includes("basmah")) return "senior-project";
+             return ""; // not mapped (e.g., registration)
+           } %>
+
+        <select id="person">
+          <% if (people && people.faculty && people.faculty.length) { %>
+            <optgroup label="Faculty" data-i18n="faculty_staff"></optgroup>
+            <% people.faculty.forEach(f=> { %>
+              <option
+                value="faculty_<%= f.id %>"
+                data-id="<%= f.id %>"
+                data-name="<%= f.name %>"
+                data-role="faculty"
+                data-category="<%= facultyCatByName(f.name) %>"><%= f.name %></option>
+            <% }) %>
+          <% } %>
+          <% if (people && people.staff && people.staff.length) { %>
+            <optgroup label="Staff" data-i18n="staff_dashboard_title"></optgroup>
+            <% people.staff.forEach(s=> { %>
+              <option
+                value="staff_<%= s.id %>"
+                data-id="<%= s.id %>"
+                data-name="<%= s.name %>"
+                data-role="staff"><%= s.name %></option>
+            <% }) %>
+          <% } %>
+        </select>
+      </div>
+
+      <!-- Attachments -->
+      <div class="attachments-section" id="attachmentsSection" hidden>
+        <h4 data-i18n="upload_documents">Upload Required Documents</h4>
+        <div class="attachments-placeholder" id="attachmentsPlaceholder">
+          <p class="muted" data-i18n="no_attachments_required">No attachments required for this category.</p>
+        </div>
+      </div>
+
+      <!-- Reason -->
+      <div class="reason-section" id="reasonSection">
+        <label for="reason" data-i18n="reason">Reason</label>
+        <textarea id="reason" maxlength="400" rows="3" placeholder=""></textarea>
+        <div class="muted" id="reasonCounter">0 / 400</div>
+      </div>
+
+      <!-- Queue status live -->
+      <div class="queue-status" id="queueStatus" hidden>
+        <span id="queueInfo">…</span>
+      </div>
+
+      <button class="book-btn"><i class="fas fa-calendar-plus"></i> <span data-i18n="book_appointment">Book Appointment</span></button>
+
+      <!-- Calendar + Slots -->
+      <div class="booking-box">
+        <p class="booking-text" id="bookingText">
+          <span data-i18n="you_are_booking">You are currently booking an appointment with</span>
+          <strong><span id="selectedPersonName"><%= (people.faculty?.[0]?.name || people.staff?.[0]?.name || "Your Advisor") %></span></strong>
+        </p>
+        <div class="booking-grid">
+          <div class="calendar-box">
+            <p class="month" id="monthLabel"></p>
+            <table class="calendar">
+              <thead>
+                <tr>
+                  <th data-i18n-weekday="sun">Sun</th>
+                  <th data-i18n-weekday="mon">Mon</th>
+                  <th data-i18n-weekday="tue">Tue</th>
+                  <th data-i18n-weekday="wed">Wed</th>
+                  <th data-i18n-weekday="thu">Thu</th>
+                  <th data-i18n-weekday="fri">Fri</th>
+                  <th data-i18n-weekday="sat">Sat</th>
+                </tr>
+              </thead>
+              <tbody id="calendarBody"></tbody>
+            </table>
+          </div>
+          <div class="slots-box">
+            <p class="slots-title" data-i18n="choose_time_slot">Please choose the time slot</p>
+            <div id="slotsContainer"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+/* ---------- PSUFlow Unified i18n + Booking Logic (with hard-coded category→faculty auto-select) ---------- */
+(function () {
+
+  // Helper to translate weekday headers (Sun–Sat)
+  function applyWeekdays() {
+    document.querySelectorAll("[data-i18n-weekday]").forEach(el => {
+      const k = el.getAttribute("data-i18n-weekday");
+      if (window.PSUi18n) el.textContent = PSUi18n.t(k, el.textContent);
+    });
+  }
+
+  // i18n alias
+  const t = (k, fb = "") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+
+  // Map UI value to same slug format we stored in data-category
+  function normalizeCat(v=""){ return String(v).trim().toLowerCase(); }
+
+  // UI helpers
+  function showNotice({ title, meta = "", variant = "success" }) {
+    const n = document.getElementById("notice");
+    n.className = "notice notice-" + variant;
+    n.innerHTML = `<span class="title">${title}</span><span class="meta">${meta}</span>`;
+    n.hidden = false;
+  }
+
+  const yyyymmdd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+  // State + elements
+  let selectedDateISO = null, selectedTime = null;
+  const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+  const personDropdown = document.getElementById("person");
+  const categoryDropdown = document.getElementById("category");
+  const selectedPersonNameEl = document.getElementById("selectedPersonName");
+  const slotsTitleEl = document.querySelector(".slots-title");
+  const slotsContainer = document.getElementById("slotsContainer");
+  const attachmentsSection = document.getElementById("attachmentsSection");
+  const attachmentsPlaceholder = document.getElementById("attachmentsPlaceholder");
+  const queueStatusEl = document.getElementById("queueStatus");
+  const queueInfo = document.getElementById("queueInfo");
+  const reasonInput = document.getElementById("reason");
+  const reasonCounter = document.getElementById("reasonCounter");
+
+  // Selection helpers
+  const getSelectedPerson = () => {
+    const opt = personDropdown.selectedOptions[0];
+    return { id: opt?.dataset.id, name: opt?.dataset.name, role: opt?.dataset.role };
+  };
+  const getSelectedCategory = () => categoryDropdown.value;
+
+  // HARD-CODED auto select: choose first faculty whose data-category matches selected category
+  function autoSelectFacultyForCategory(slug){
+    if (!slug) return;
+    const opts = Array.from(personDropdown.options)
+      .filter(o => o.value.startsWith("faculty_")); // faculty only per your request
+    const match = opts.find(o => (o.dataset.category || "") === slug);
+    if (match) {
+      match.selected = true;
+      selectedPersonNameEl.textContent = match.dataset.name || "Advisor";
+    }
+  }
+
+  // Attachments renderer (unchanged)
+  function renderAttachments(category) {
+    const cat = normalizeCat(category);
+    attachmentsPlaceholder.innerHTML = "";
+    let formHtml = "", req = false;
+
+    if (cat === "financial") {
+      formHtml = `<div class="file-input-group">
+                    <label data-i18n="payment_proof">${t("payment_proof","Payment Proof")}:</label>
+                    <input type="file" name="paymentProof" required>
+                  </div>`;
+      req = true;
+    } else if (cat === "registration") {
+      formHtml = `<div class="file-input-group">
+                    <label data-i18n="transcripts">${t("transcripts","Official Transcripts")}:</label>
+                    <input type="file" name="transcripts" required>
+                  </div>`;
+      req = true;
+    }
+
+    attachmentsPlaceholder.innerHTML = req
+      ? formHtml
+      : `<p class="muted" data-i18n="no_attachments_required">${t("no_attachments_required","No attachments required for this category.")}</p>`;
+    attachmentsSection.hidden = false;
+
+    if (window.PSUi18n) {
+      PSUi18n.apply(attachmentsSection);
+      applyWeekdays();
+    }
+  }
+
+  // Calendar (i18n-enabled)
+  const monthLabel = document.getElementById("monthLabel");
+  const calendarBody = document.getElementById("calendarBody");
+  const today = new Date();
+  const year = today.getFullYear(), month = today.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const startDay = firstOfMonth.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const monthKey = i => ([
+    "month_january","month_february","month_march","month_april",
+    "month_may","month_june","month_july","month_august",
+    "month_september","month_october","month_november","month_december"
+  ][i]);
+
+  function localizeDigits(str){
+    if ((document.documentElement.lang || "en").startsWith("ar")) {
+      return String(str).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[Number(d)]);
+    }
+    return String(str);
+  }
+
+  function formatDateI18n(dateObj){
+    const y = dateObj.getFullYear();
+    const m = t(monthKey(dateObj.getMonth()), dateObj.toLocaleString(undefined,{month:"long"}));
+    const d = dateObj.getDate();
+    const core = `${d} ${m} ${y}`;
+    return (document.documentElement.lang || "en").startsWith("ar") ? localizeDigits(core) : core;
+  }
+
+  function setMonthLabelBase(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = t(monthKey(dateObj.getMonth()), dateObj.toLocaleString(undefined,{month:"long"}));
+    monthLabel.textContent = `${m} ${localizeDigits(y)}`;
+  }
+  setMonthLabelBase(firstOfMonth);
+
+  let dayNum = 1;
+  for (let week = 0; week < 6; week++) {
+    const tr = document.createElement("tr");
+    for (let dow = 0; dow < 7; dow++) {
+      const td = document.createElement("td");
+      if ((week === 0 && dow < startDay) || dayNum > daysInMonth) {
+        td.className = "faded";
+      } else {
+        td.className = "day";
+        td.textContent = localizeDigits(dayNum);
+        const iso = yyyymmdd(new Date(year, month, dayNum));
+        td.dataset.date = iso;
+
+        td.addEventListener("click", async () => {
+          selectedDateISO = iso;
+          document.querySelectorAll(".day").forEach(d => d.classList.remove("selected"));
+          td.classList.add("selected");
+          selectedTime = null;
+
+          const base = t("choose_time_slot_for","Please choose the time slot for ");
+          slotsTitleEl.textContent = base + formatDateI18n(new Date(iso));
+
+          await renderSlots(getSelectedPerson(), iso);
+          await updateQueueStatus(getSelectedPerson(), iso);
+        });
+
+        dayNum++;
+      }
+      tr.appendChild(td);
+    }
+    calendarBody.appendChild(tr);
+  }
+
+  // Slots
+  const DEFAULT_SLOTS = ["12:00 PM", "12:15 PM", "12:30 PM", "12:45 PM"];
+  async function renderSlots(person, dateISO) {
+    slotsContainer.innerHTML = "";
+    let slots = DEFAULT_SLOTS.map(t => ({ time: t, available: true }));
+
+    if (person.role === "faculty" && person.id) {
+      try {
+        const resp = await fetch(`/appointments/available/${person.id}/${dateISO}`);
+        if (resp.ok) slots = await resp.json();
+      } catch { }
+    }
+
+    slots.forEach(s => {
+      const btn = document.createElement("button");
+      btn.className = "slot " + (s.available ? "available" : "full");
+      btn.textContent = s.time;
+      btn.disabled = !s.available;
+      btn.addEventListener("click", () => {
+        selectedTime = s.time;
+        document.querySelectorAll(".slot").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+      });
+      slotsContainer.appendChild(btn);
+    });
+  }
+
+  // Queue summary
+  async function updateQueueStatus(person, dateISO) {
+    if (!person?.id || !dateISO) return (queueStatusEl.hidden = true);
+    try {
+      const res = await fetch(`/queues/summary?facultyId=${person.id}&category=${getSelectedCategory()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const count = data.queue?.length || 0;
+        queueInfo.textContent = `${t("category_scope","Category:")} ${getSelectedCategory()} — ${t("queue_waiting","Waiting")}: ${count} • ${t("queue_eta","ETA")}: ${count * 15} min`;
+        queueStatusEl.hidden = false;
+      } else queueStatusEl.hidden = true;
+    } catch {
+      queueStatusEl.hidden = true;
+    }
+  }
+
+  // Reason counter + placeholder
+  function paintReasonCounter(){
+    const max = Number(reasonInput?.getAttribute("maxlength") || 400);
+    const used = (reasonInput?.value || "").length;
+    if (reasonCounter) reasonCounter.textContent = `${used} / ${max}`;
+  }
+  reasonInput?.addEventListener("input", paintReasonCounter);
+
+  // Events
+  personDropdown.addEventListener("change", async () => {
+    const p = getSelectedPerson();
+    selectedPersonNameEl.textContent = p.name || "Advisor";
+    if (selectedDateISO) await renderSlots(p, selectedDateISO);
+  });
+
+  // Category change → hard-coded auto-select of related faculty
+  categoryDropdown.addEventListener("change", async () => {
+    const slug = normalizeCat(getSelectedCategory());
+    renderAttachments(slug);
+    autoSelectFacultyForCategory(slug); // <<< HARD-CODED SELECTOR
+
+    const p = getSelectedPerson();
+    if (selectedDateISO) {
+      await renderSlots(p, selectedDateISO);
+      await updateQueueStatus(p, selectedDateISO);
+    }
+  });
+
+  // Book
+  document.querySelector(".book-btn").addEventListener("click", async () => {
+    const p = getSelectedPerson(), category = getSelectedCategory();
+    if (!selectedDateISO || !selectedTime)
+      return showNotice({ title: t("error_loading","Select a date/time"), meta: t("filter_by_date","Pick a date and slot"), variant: "notice-error" });
+    if (!currentUser?.id)
+      return showNotice({ title: t("login_title","Please login"), meta: t("success","Must be signed in"), variant: "notice-error" });
+
+    const reasonVal = (reasonInput?.value || "").trim();
+    if (!reasonVal) {
+      return showNotice({
+        title: t("required_field","This field is required."),
+        meta: t("reason_required","Please write a brief reason for your appointment."),
+        variant: "notice-error"
+      });
+    }
+
+    const requiredFile = attachmentsPlaceholder.querySelector('input[type="file"][required]');
+    if (requiredFile && requiredFile.files.length === 0)
+      return showNotice({ title: t("no_attachments_required","Missing required attachment"), meta: t("upload_documents","Upload required document"), variant: "notice-error" });
+
+    const formData = new FormData();
+    formData.append("studentId", currentUser.id);
+    formData.append("personId", p.id);
+    // (Optional) If your server expects role, uncomment:
+    // formData.append("personRole", "faculty");
+    formData.append("date", selectedDateISO);
+    formData.append("time", selectedTime);
+    formData.append("category", category);
+    formData.append("reason", reasonVal);
+    if (requiredFile) formData.append(requiredFile.name, requiredFile.files[0]);
+
+    try {
+      const resp = await fetch("/appointments/book", { method: "POST", body: formData });
+      const data = await resp.json();
+      if (!resp.ok)
+        return showNotice({ title: t("server_error","Booking failed"), meta: data.error || t("error_loading","Try another slot"), variant: "notice-error" });
+
+      showNotice({
+        title: t("success","Appointment booked"),
+        meta: `${t("modal_with","With")}: ${p.name}
+${t("date","Date")}: ${selectedDateISO}
+${t("time","Time")}: ${selectedTime}
+${t("category","Category")}: ${category}
+${t("reason","Reason")}: ${reasonVal}`,
+        variant: "notice-success"
+      });
+      localStorage.setItem("upcomingAppointment", JSON.stringify({
+        date: selectedDateISO, time: selectedTime, person: p.name, category
+      }));
+    } catch {
+      showNotice({ title: t("network_error","Network error"), meta: t("error_loading","Check connection"), variant: "notice-error" });
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("user");
+    location.href = "/login";
+  });
+
+  // i18n boot
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang) {
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+      document.body.classList.toggle("rtl", lang === "ar");
+      applyWeekdays();
+      setMonthLabelBase(new Date(year, month, 1));
+      if (selectedDateISO) {
+        const base = t("choose_time_slot_for","Please choose the time slot for ");
+        slotsTitleEl.textContent = base + formatDateI18n(new Date(selectedDateISO));
+      } else {
+        slotsTitleEl.textContent = t("choose_time_slot","Please choose the time slot");
+      }
+      if (reasonInput) reasonInput.placeholder = t("reason_placeholder","Briefly explain why you need this appointment");
+    }
+  });
+
+  // First paint
+  (async function init() {
+    if (i18nReady?.then) { try { await i18nReady; } catch { } }
+    if (window.PSUi18n) { PSUi18n.apply(document.body); applyWeekdays(); }
+
+    // Auto-select default category’s faculty on load
+    const initialSlug = normalizeCat(getSelectedCategory());
+    autoSelectFacultyForCategory(initialSlug);
+
+    // Reason placeholder/counter
+    if (reasonInput) reasonInput.placeholder = t("reason_placeholder","Briefly explain why you need this appointment");
+    const max = Number(reasonInput?.getAttribute("maxlength") || 400);
+    const used = (reasonInput?.value || "").length;
+    reasonCounter.textContent = `${used} / ${max}`;
+  })();
+
+})();
+</script>
+
+</body>
+</html>

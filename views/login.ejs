@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || "Login | PSUFlow" %></title>
+  <link rel="stylesheet" href="/css/login.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+  <div class="login-container">
+    <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="login-logo" />
+    <h2>Welcome Back!</h2>
+
+    <form id="loginForm">
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input id="username" type="text" placeholder="Username" required />
+      </div>
+
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input id="password" type="password" placeholder="Password" required />
+      </div>
+
+      <!-- Radios kept for UI (not sent to API; role comes from server response) -->
+      <div class="radio-group">
+        <label><input type="radio" name="role" value="student" /> Student</label>
+        <label><input type="radio" name="role" value="faculty" /> Faculty</label>
+        <label><input type="radio" name="role" value="staff" /> Staff</label>
+      </div>
+
+      <button type="submit">Login</button>
+      <a href="/resetpass" class="forgot-password">Forgot Password?</a>
+      <p id="msg" style="color:#e74c3c;margin-top:10px;"></p>
+    </form>
+  </div>
+
+<script>
+(function(){
+  const form = document.getElementById("loginForm");
+  const msg  = document.getElementById("msg");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.textContent = "";
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || "Login failed.";
+        return;
+      }
+
+      // Expecting: { id, name, role }
+      localStorage.setItem("user", JSON.stringify(data));
+
+      if (data.role === "student")      location.href = "/studentdashboard";
+      else if (data.role === "faculty") location.href = "/facultydashboard";
+      else if (data.role === "staff")   location.href = "/staffdashboard";
+      else                              location.href = "/";
+    } catch (err) {
+      console.error(err);
+      msg.textContent = "Network error. Please try again.";
+    }
+  });
+})();
+</script>
+</body>
+</html>

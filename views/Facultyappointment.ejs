@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="faculty_dashboard_title"><%= title || "PSUFlow Faculty Appointments" %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{ box-sizing:border-box; font-family:'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif; }
+    body{ margin:0; background:#eaf3fb; }
+
+    /* ===== Layout: Sidebar + Main ===== */
+    .container{
+      display:flex;
+      min-height:100vh;
+    }
+    .main{
+      flex:1;
+      padding:40px 40px 80px;
+      position:relative;
+    }
+    .main img.logo{ width:120px; margin-bottom:20px; display:block; }
+
+    h1{ margin-bottom:10px; color:#1a1a1a; }
+    h1 .blue{ color:#1a73e8; }
+    .subhead{ margin:0 0 30px; color:#4a4a4a; }
+    .muted{ color:#666; }
+
+    /* ===== Sidebar (unified) ===== */
+    .sidebar{
+      width:300px;
+      background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+      color:#fff;
+      padding:20px 0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      position:sticky;
+      top:0;
+    }
+    .sidebar .logo{ width:120px; margin-bottom:30px; }
+
+    /* Support .nav, nav ul, or plain ul */
+    .sidebar .nav,
+    .sidebar nav ul,
+    .sidebar > ul{
+      list-style:none;
+      padding:0;
+      margin:0;
+      width:100%;
+    }
+    .sidebar .nav li,
+    .sidebar nav ul li,
+    .sidebar > ul > li{
+      padding:12px 30px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      cursor:pointer;
+    }
+    .sidebar a{
+      text-decoration:none;
+      color:#fff;
+      display:block;
+      width:100%;
+      margin:10px 0;
+      padding:10px 12px;
+      border-radius:8px;
+      transition: background .3s, transform .06s ease;
+      line-height:1.25;
+      white-space:normal;
+      word-break:break-word;
+    }
+    .sidebar .nav li:hover,
+    .sidebar nav ul li:hover,
+    .sidebar > ul > li:hover{
+      background-color: rgba(255,255,255,0.10);
+    }
+    .sidebar a:hover{
+      background-color: rgba(255,255,255,0.18);
+      transform: translateY(1px);
+    }
+    .sidebar a.active{
+      background-color: rgba(255,255,255,0.22);
+      font-weight:700;
+    }
+    .sidebar a i{ min-width:18px; }
+
+    .logout,
+    .logout-btn{
+      margin-top:auto;
+      margin-bottom:20px;
+      padding:10px 20px;
+      background-color:#fff;
+      color:#1e60ff;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      transition: filter .2s ease, transform .06s ease, background .2s ease;
+    }
+    .logout:hover,
+    .logout-btn:hover{ background-color:#f0f0f0; }
+    .logout:active,
+    .logout-btn:active{ transform: translateY(1px); }
+
+    /* RTL */
+    html[dir="rtl"] .sidebar .nav li,
+    html[dir="rtl"] .sidebar nav ul li,
+    html[dir="rtl"] .sidebar > ul > li{ flex-direction: row-reverse; }
+    html[dir="rtl"] .sidebar a i{ min-width:18px; }
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .container{ flex-direction:column; }
+      .sidebar{ width:100%; height:auto; position:relative; }
+      .main{ padding:24px 16px 56px; }
+    }
+
+    /* ===== Language Switch (frosted) ===== */
+    #langSwitch {
+      width: 85%;
+      padding: 10px 14px;
+      margin: 12px auto 24px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.05s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      backdrop-filter: blur(4px);
+    }
+    #langSwitch:hover,
+    #langSwitch:focus { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.8); transform: translateY(1px); }
+    #langSwitch option { color:#1e60ff; background:#fff; font-weight:600; }
+    html[dir="rtl"] #langSwitch { text-align:right; }
+
+    /* ===== Filters ===== */
+    .filter-bar{ margin: 0 0 20px; }
+    .filter-bar label{ font-weight:600; margin-right:8px; }
+
+    /* ===== Tables ===== */
+    table{ width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.1); margin-bottom:30px; }
+    th,td{ text-align:left; padding:15px 20px; }
+    th{ background:#f0f4f8; color:#0f172a; font-weight:700; }
+    td{ color:#1f2937; }
+    body.rtl table th, body.rtl table td{ text-align:right; }
+
+    /* ===== Badges ===== */
+    .badge{ padding:4px 10px; border-radius:12px; font-size:12px; color:#fff; }
+    .waiting{ background:#f4b400; }
+    .confirmed{ background:#34a853; }
+
+    /* ===== Buttons (unified) ===== */
+    .btn{
+      appearance:none; border:0; cursor:pointer;
+      padding:9px 14px; border-radius:10px; font-weight:700;
+      transition:transform .06s ease, box-shadow .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+      box-shadow:0 1px 2px rgba(0,0,0,.06);
+      display:inline-flex; align-items:center; gap:8px;
+      font-size:14px;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .btn.primary{ background:#1a73e8; color:#fff; }
+    .btn.primary:hover{ background:#1669cf; }
+    .btn.gray{ background:#fff; color:#1a73e8; border:2px solid #1a73e8; }
+    .btn.gray:hover{ background:#eef5ff; color:#155fc2; border-color:#155fc2; }
+    .btn.danger{ background:#e74c3c; color:#fff; }
+    .btn.danger:hover{ background:#c0392b; }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <select id="langSwitch">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <ul>
+        <li><a href="/facultydashboard"><i class="fas fa-home"></i> <span data-i18n="faculty_dashboard_title">Dashboard</span></a></li>
+        <li><a class="active" href="/facultyappointment"><i class="fas fa-calendar"></i> <span data-i18n="upcoming_appointments">Appointments</span></a></li>
+        <li><a href="/facultyinbox"><i class="fas fa-inbox"></i> <span data-i18n="inbox">Inbox</span></a></li>
+      </ul>
+      <button class="logout" id="logoutBtn" data-i18n="logout_button">Logout</button>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo" />
+      <h1>PSU<span class="blue">Flow</span> <span data-i18n="faculty_dashboard_title">Faculty Appointments</span></h1>
+      <p class="subhead muted" data-i18n="upcoming_appointments">Upcoming bookings with student details.</p>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <label><input type="checkbox" id="academicOnlyChk"> <span data-i18n="academic_only">Show academic only</span></label>
+      </div>
+
+      <!-- Student Appointments Table -->
+      <h2 data-i18n="student">Student Appointments</h2>
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th data-i18n="student">Student Name</th>
+            <th data-i18n="date">Date</th>
+            <th data-i18n="time">Time</th>
+            <th data-i18n="category">Category</th>
+            <th data-i18n="status">Status</th>
+            <th data-i18n="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- i18n loader MUST come before the inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <script>
+  (function(){
+    const user = JSON.parse(localStorage.getItem('user')||'null');
+    const studentTBody = document.querySelector('#studentTable tbody');
+    const staffTBody = document.querySelector('#staffTable tbody');
+    const academicOnlyChk = document.getElementById('academicOnlyChk');
+    const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb||k));
+
+    function badge(statusRaw){
+      const s = String(statusRaw || '').toUpperCase();
+      const span = document.createElement('span');
+      span.classList.add('badge');
+      switch (s) {
+        case 'APPROVED':
+        case 'CONFIRMED':
+        case 'COMPLETED':
+          span.classList.add('confirmed');
+          span.textContent = 'Approved';
+          break;
+        case 'REJECTED':
+        case 'CANCELED':
+          span.style.background = '#c62828';
+          span.textContent = (s === 'REJECTED' ? 'Rejected' : 'Canceled');
+          break;
+        case 'RESCHEDULED':
+          span.style.background = '#6b7280';
+          span.textContent = 'Rescheduled';
+          break;
+        case 'WAITING':
+        default:
+          span.classList.add('waiting');
+          span.textContent = 'Waiting';
+      }
+      return span;
+    }
+
+    function row(cells){
+      const tr=document.createElement('tr');
+      cells.forEach(c=>{
+        const td=document.createElement('td');
+        if(c instanceof Node) td.appendChild(c); else td.textContent=c;
+        tr.appendChild(td);
+      });
+      return tr;
+    }
+
+    function niceDate(iso){
+      try{
+        const d=new Date(iso+'T00:00:00');
+        return d.toLocaleDateString(document.documentElement.lang || undefined,{month:'short',day:'numeric'});
+      }catch{return iso;}
+    }
+
+    async function handleBlockTime(date,time){
+      if(!confirm(`${t("block_slot","Block Time")} ${date} ${t("time","at")} ${time}?`))return;
+      try{
+        const res=await fetch('/faculty/block',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({facultyId:user.id,date,time})
+        });
+        if(res.ok){ alert(t("time_blocked","Blocked successfully")); loadAppointments(); }
+        else alert(t("block_failed","Failed to block time"));
+      }catch(e){ console.error(e); alert(t("network_error","Network error")); }
+    }
+
+    async function loadAppointments(){
+      if(!user?.id){
+        studentTBody.innerHTML=`<tr><td colspan="6" class="muted">${t("login_title","Login as faculty.")}</td></tr>`;
+        return;
+      }
+      try{
+        const onlyAcademic = academicOnlyChk.checked ? '?onlyAcademic=true' : '';
+        const res=await fetch(`/appointments/upcoming/${user.id}${onlyAcademic}`);
+        const data=res.ok?await res.json():[];
+
+        studentTBody.innerHTML='';
+        if(!Array.isArray(data)||!data.length){
+          studentTBody.innerHTML=`<tr><td colspan="6" class="muted">${t("no_appointments","No upcoming student appointments.")}</td></tr>`;
+        }else{
+          data.forEach(a=>{
+            const studentName=a.student?.name||a.student?.username||'—';
+            const status=a.status||'Waiting';
+
+            const blockBtn=document.createElement('button');
+            blockBtn.textContent=t("block_slot","Block Time");
+            blockBtn.className='btn danger';         // unified styling
+            blockBtn.addEventListener('click',()=>handleBlockTime(a.date,a.time));
+
+            const actionsWrap=document.createElement('div');
+            actionsWrap.appendChild(blockBtn);
+
+            studentTBody.appendChild(row([
+              studentName,
+              niceDate(a.date),
+              a.time||'—',
+              a.category||'—',
+              badge(status),
+              actionsWrap
+            ]));
+          });
+        }
+      }catch(e){
+        console.error(e);
+        studentTBody.innerHTML=`<tr><td colspan="6" class="muted">${t("error_loading","Error loading appointments.")}</td></tr>`;
+      }
+
+      // Example staff row (replace with API when available)
+      staffTBody.innerHTML='';
+      staffTBody.appendChild(row([
+        'Dr. Basmah Alkaniry','Sep 30','10:00 AM','Computer Science',badge('Confirmed')
+      ]));
+    }
+
+    academicOnlyChk.addEventListener('change',loadAppointments);
+    document.getElementById('logoutBtn').addEventListener('click',()=>{ localStorage.removeItem('user'); location.href='/login'; });
+
+    // i18n + RTL toggle
+    document.getElementById("langSwitch")?.addEventListener("change", (e)=>{
+      if (window.PSUi18n){
+        PSUi18n.setLang(e.target.value);
+        PSUi18n.apply(document.body);
+      }
+      loadAppointments();
+    });
+
+    loadAppointments();
+  })();
+  </script>
+</body>
+</html>

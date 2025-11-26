@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title data-i18n="staff_dashboard_title"><%= title || "PSUFlow Staff Dashboard" %></title>
+
+  <!-- i18n loader FIRST so translations are ready for inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <!-- (Optional) reuse your base card/grid styles if needed -->
+  <link rel="stylesheet" href="/css/studentdashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    *{ box-sizing:border-box; font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif; }
+    body{ margin:0; background:#eaf3fb; transition: direction .2s ease; }
+
+    :root{ --card-bg:#fff; --muted:#666; --soft:#eef3fb; }
+    .muted{color:var(--muted)}
+    .small{ font-size:13px; }
+
+    /* ====== Page layout wrapper ====== */
+    .layout{ display:flex; min-height:100vh; width:100%; }
+
+    /* ====== Sidebar ====== */
+    .sidebar{
+      width:300px; background: linear-gradient(to bottom, #1e90ff, #1e60ff); color:#fff;
+      padding:20px 0; height:100vh; display:flex; flex-direction:column; align-items:center;
+      position:sticky; top:0;
+    }
+    .sidebar a{ text-decoration:none; color:#fff; display:block; width:100%;
+      margin:10px 0; padding:10px 12px; border-radius:8px; transition: background .3s, transform .06s ease; }
+    .sidebar a:hover{ background-color: rgba(255,255,255,0.18); transform: translateY(1px); }
+    .sidebar a.active{ background-color: rgba(255,255,255,0.22); font-weight:700; }
+    .logout-btn{
+      margin-top:auto; margin-bottom:20px; padding:10px 20px; background-color:#fff; color:#1e60ff;
+      border:none; border-radius:8px; cursor:pointer; font-weight:700;
+    }
+
+    /* ====== Language Switch ====== */
+    #langSwitch {
+      width: 85%; padding: 10px 14px; margin: 12px auto 24px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15);
+      color: #fff; font-weight: 600; font-size: 15px; text-align: center; cursor: pointer; outline: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); backdrop-filter: blur(4px);
+    }
+    html[dir="rtl"] #langSwitch { text-align: right; }
+
+    /* ====== Main ====== */
+    .main-content{ flex:1; padding:28px 32px 56px; }
+    .dashboard-header{ display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+    .dashboard-logo{ width:120px; height:auto; display:block; }
+    h1{ margin:0; color:#1a1a1a; }
+    h1 .blue{ color:#1a73e8; }
+
+    /* ====== Grid ====== */
+    .row{ display:grid; grid-template-columns: repeat(12, 1fr); gap:16px; }
+    .col-12{ grid-column: span 12; }
+
+    /* ====== Cards / tables ====== */
+    .card{ background:var(--card-bg); border-radius:12px; padding:16px 18px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0 12px; }
+    .toolbar input[type="search"], .toolbar select{ padding:8px 10px; border:1px solid #d7dfe9; border-radius:8px; background:#fff; }
+    .toolbar .hint{ font-size:12px; color:#556; opacity:.9; }
+
+    table{ width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+    th,td{ padding:12px 14px; text-align:left; vertical-align:top; }
+    thead th{ font-size:13px; color:#334; background:#f5f8fe; }
+    tbody tr{ border-bottom:1px solid #eee; cursor:pointer;}
+    tbody tr:hover{ background:#fafcff;}
+    html[dir="rtl"] th, html[dir="rtl"] td{ text-align:right; }
+
+    /* Long text (reasons) */
+    .truncate-2{
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden;
+      max-width:620px; white-space:pre-wrap; word-break:break-word;
+    }
+
+    /* Badges */
+    .badge{ padding:4px 10px; border-radius:12px; font-size:12px; color:#fff; margin-inline-start:6px; white-space:nowrap; }
+    .waiting{ background:#f4b400; }
+    .in-progress{ background:#1e90ff; }
+    .completed,.confirmed{ background:#34a853; }
+    .canceled{ background:#e74c3c; }
+    .rescheduled{ background:#8e44ad; }
+
+    /* Buttons */
+    .btn{ padding:8px 12px; border:0; border-radius:10px; background:#1a73e8; color:#fff; cursor:pointer; font-weight:600; }
+    .btn.secondary{ background:#6b7280; }
+
+    /* Modal */
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:20; }
+    .modal{ width:min(780px, 92vw); background:#fff; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.28); overflow:hidden; }
+    .modal header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#1a73e8; color:#fff; }
+    .modal .content{ padding:16px; }
+    .modal .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .modal .attachments a{ display:inline-flex; align-items:center; gap:6px; padding:8px 10px; border:1px solid #d7dfe9; border-radius:8px; margin-right:8px; text-decoration:none; }
+    .modal footer{ padding:12px 16px; background:#fafafa; text-align:right; }
+    .reason-box{ background:#f8fafc; border:1px solid #e6eef7; border-radius:8px; padding:10px; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <select id="langSwitch">
+      <option value="en" data-i18n="english">English</option>
+      <option value="ar" data-i18n="arabic">العربية</option>
+    </select>
+
+    <nav>
+      <ul>
+        <li><a class="active" href="/staffdashboard"><i class="fas fa-home"></i> <span data-i18n="dashboard">Dashboard</span></a></li>
+        <li><a href="/staffinbox"><i class="fas fa-inbox"></i> <span data-i18n="inbox">Inbox</span></a></li>
+      </ul>
+    </nav>
+
+    <button class="logout-btn" id="logoutBtn">
+      <i class="fa fa-sign-out-alt"></i> <span data-i18n="logout_button">Logout</span>
+    </button>
+  </aside>
+
+  <main class="main-content">
+    <div class="dashboard-header">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="dashboard-logo">
+      <h1>PSU<span class="blue">Flow</span> <span data-i18n="staff_dashboard_title">Staff Dashboard</span></h1>
+    </div>
+
+    <!-- Student Appointment History -->
+    <div class="card col-12" id="history-card" style="margin-bottom:20px">
+      <h3 data-i18n="student_history">Student Appointment History</h3>
+      <div class="toolbar">
+        <input id="historySearch" type="search" placeholder="Search by student name or ID…" />
+        <button class="btn" id="historyGo" data-i18n="search">Search</button>
+        <span class="hint muted small" id="historyHint"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="student">Student</th>
+            <th data-i18n="with">Faculty/Staff</th>
+            <th data-i18n="category">Category</th>
+            <th data-i18n="date">Date</th>
+            <th data-i18n="time">Time</th>
+            <th data-i18n="status">Status</th>
+            <th style="width:40%;" data-i18n="reason">Reason</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="7" class="muted small" data-i18n="enter_query_hint">Enter a student name or ID and press Search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Upcoming appointments -->
+    <div class="row">
+      <div class="card col-12" id="upcoming-card">
+        <h3 data-i18n="upcoming_appointments">Upcoming Appointments</h3>
+
+        <div class="toolbar">
+          <input id="searchBox" type="search" data-i18n-placeholder="search_hint" placeholder="Search student / with / reason…" />
+          <label data-i18n="sort_by">Sort by</label>
+          <select id="sortBy">
+            <option value="date" data-i18n="date">Date</option>
+            <option value="time" data-i18n="time">Time</option>
+            <option value="category" data-i18n="category">Category</option>
+          </select>
+          <label data-i18n="category">Category</label>
+          <select id="catFilter">
+            <option value="all" data-i18n="all">All</option>
+          </select>
+          <span class="hint" id="catHint"></span>
+        </div>
+
+        <table>
+          <thead>
+          <tr>
+            <th data-i18n="student">Student</th>
+            <th data-i18n="with">Faculty/Staff</th>
+            <th data-i18n="category">Category</th>
+            <th data-i18n="date">Date</th>
+            <th data-i18n="time">Time</th>
+            <th data-i18n="status">Status</th>
+            <th style="width:40%;" data-i18n="reason">Reason</th>
+          </tr>
+          </thead>
+          <tbody id="apptTbody">
+          <tr><td colspan="7" class="muted small" data-i18n="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Details Modal -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal" id="detailsModal">
+    <header>
+      <h4 id="modalTitle" data-i18n="appointment_details">Appointment details</h4>
+      <button class="btn secondary" id="closeModal" aria-label="Close" data-i18n="close">Close</button>
+    </header>
+    <div class="content">
+      <div class="grid">
+        <div><strong data-i18n="student">Student</strong>: <span id="mStudent">—</span></div>
+        <div><strong data-i18n="with">With</strong>: <span id="mWith">—</span></div>
+        <div><strong data-i18n="category">Category</strong>: <span id="mCategory">—</span></div>
+        <div><strong data-i18n="status">Status</strong>: <span id="mStatus">—</span></div>
+        <div><strong data-i18n="date">Date</strong>: <span id="mDate">—</span></div>
+        <div><strong data-i18n="time">Time</strong>: <span id="mTime">—</span></div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <strong data-i18n="reason_provided">Reason provided by student:</strong>
+        <div id="mReason" class="reason-box">—</div>
+      </div>
+
+      <div class="attachments" style="margin-top:14px;">
+        <strong data-i18n="attachments">Attachments:</strong>
+        <span id="mNoFiles" class="muted" data-i18n="none">None</span>
+        <span id="mFiles"></span>
+      </div>
+    </div>
+    <footer>
+      <button class="btn secondary" id="closeModal2" data-i18n="close">Close</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ---------- safe text helpers ---------- */
+  const escapeHTML = (s = "") =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  // (legacy helper, kept in case you want it later)
+  function getFromSubkeys(v) {
+    const sub = ["text","value","content","en","ar","reason","note","notes","description","details","message"];
+    for (const k of sub) {
+      if (v && typeof v === "object" && k in v) {
+        const got = pickString(v[k]);
+        if (got) return got;
+      }
+    }
+    return "";
+  }
+
+  /* --- STRICT reason extractor (broader allowlist, no whole-object scan) --- */
+  function pickString(v){
+    if (typeof v === "string") return v.trim();
+
+    if (Array.isArray(v)){
+      for (const it of v){
+        const s = pickString(it);
+        if (s) return s;
+      }
+      return "";
+    }
+
+    if (v && typeof v === "object"){
+      const sub = [
+        "text","value","content","en","ar",
+        "reason","note","notes","description","details","message",
+        "reasonForVisit","appointmentReason","visitReason","purpose","purposeOfVisit"
+      ];
+      for (const k of sub){
+        if (k in v){
+          const s = pickString(v[k]);
+          if (s) return s;
+        }
+      }
+      return "";
+    }
+
+    return "";
+  }
+
+  function pickReason(obj = {}){
+    // common direct fields
+    const directKeys = [
+      "reason","studentReason","reasonText","notes","note",
+      "description","details","message",
+      "reasonForVisit","appointmentReason","visitReason","purpose","purposeOfVisit"
+    ];
+    for (const k of directKeys){
+      if (k in obj){
+        const s = pickString(obj[k]);
+        if (s) return s;
+      }
+    }
+
+    // common containers that may hold the same keys
+    const containers = [
+      "appointment","booking","request","payload","data","meta","extra",
+      "context","form","fields","ticket","history"
+    ];
+    for (const c of containers){
+      if (c in obj){
+        const s = pickString(obj[c]);
+        if (s) return s;
+      }
+    }
+    return "";
+  }
+
+  /* ---------- i18n boot ---------- */
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+
+      setPlaceholder(searchBoxEl, "search_hint", "Search student / with / reason…");
+      if (ALL.length) applyFilters(); else loadUpcoming();
+
+      const sel = document.getElementById("langSwitch");
+      if (sel && sel.value !== lang) sel.value = lang;
+    }
+  });
+
+  const t = (k, fb = "") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+  function setPlaceholder(el, key, fb){
+    if (el) el.placeholder = t(key, fb);
+  }
+
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  /* ===== badge + utilities ===== */
+  function statusBadge(statusRaw) {
+    const span = document.createElement("span");
+    const status = (statusRaw || "").toUpperCase();
+    let cls = "waiting", text = t("waiting", "Waiting");
+
+    if (status.includes("PROGRESS")) {
+      cls = "in-progress";
+      text = t("in_progress", "In Progress");
+    } else if (status.includes("COMPLETE") || status.includes("CONFIRM")) {
+      cls = "completed";
+      text = t("completed", "Completed");
+    } else if (status.includes("CANCEL")) {
+      cls = "canceled";
+      text = t("canceled", "Canceled");
+    } else if (status.includes("RESCHED")) {
+      cls = "rescheduled";
+      text = t("rescheduled", "Rescheduled");
+    }
+
+    span.className = "badge " + cls;
+    span.textContent = text;
+    return span;
+  }
+
+  function isFutureOrToday(iso){
+    if (!iso) return false;
+    const t0 = new Date();
+    t0.setHours(0,0,0,0);
+    const d = new Date(iso + "T00:00:00");
+    return d.getTime() >= t0.getTime();
+  }
+
+  // Auto-mark past appointments as COMPLETED in the UI
+  function normalizeStatus(status, date){
+    const raw = (status || "").toUpperCase();
+
+    // if no date, don't change anything
+    if (!date) return raw || "WAITING";
+
+    // future or today → keep original (or WAITING)
+    if (isFutureOrToday(date)) {
+      return raw || "WAITING";
+    }
+
+    // past date: if still pending-like, show as COMPLETED
+    if (!raw ||
+        raw === "WAITING" ||
+        raw === "PENDING" ||
+        raw.includes("PROGRESS") ||
+        raw === "APPROVED") {
+      return "COMPLETED";
+    }
+
+    // for CANCELED / REJECTED / RESCHEDULED etc., keep original
+    return raw;
+  }
+
+  function shortDate(iso){
+    try{
+      return new Date(iso + "T00:00:00").toLocaleDateString(
+        document.documentElement.lang || undefined,
+        { month: "short", day: "numeric" }
+      );
+    }catch{
+      return iso;
+    }
+  }
+
+  function shortDateISO(iso){
+    try{
+      return new Date(iso + "T00:00:00").toLocaleDateString(
+        document.documentElement.lang || undefined,
+        { month: "short", day: "numeric", year: "numeric" }
+      );
+    }catch{
+      return iso || "—";
+    }
+  }
+
+  function toTimeKey(ti){
+    return (ti || "").replace(/[^0-9APMapm]/g, "");
+  }
+
+  /* ===== Upcoming table ===== */
+  const tbody       = document.getElementById("apptTbody");
+  const sortBySel   = document.getElementById("sortBy");
+  const searchBoxEl = document.getElementById("searchBox");
+  const catFilterEl = document.getElementById("catFilter");
+  const catHintEl   = document.getElementById("catHint");
+
+  let ALL = [];
+
+  function normalize(a = {}){
+    const date = a.dateISO || a.date || "";
+    const time = a.timeLabel || a.time || "";
+
+    return {
+      id: a.id,
+      studentName: a.studentName || a.student?.name || a.student?.username || t("student","Student"),
+      withName: a.facultyName || a.faculty?.name || a.faculty?.username || "—",
+      date,
+      time,
+      category: a.category || "",
+      status: normalizeStatus(a.status || "WAITING", date),
+      reason: pickReason(a) || "",
+      transcript: a.transcript || (a.id ? `/attachments/${a.id}/transcript` : null),
+      payment: a.payment || (a.id ? `/attachments/${a.id}/paymentProof` : null),
+    };
+  }
+
+  function uniqueCategories(rows){
+    const s = new Set();
+    rows.forEach(r => { if (r.category) s.add(r.category); });
+    return Array.from(s).sort((a,b) => a.localeCompare(b));
+  }
+
+  function applyFilters(){
+    const q   = (searchBoxEl.value || "").toLowerCase().trim();
+    const cat = catFilterEl.value;
+    const sby = sortBySel.value;
+
+    let list = ALL
+      .filter(r => r.date && isFutureOrToday(r.date))
+      .filter(r => cat === "all" ? true : (r.category === cat))
+      .filter(r => {
+        if (!q) return true;
+        return [r.studentName, r.withName, r.category, r.status, r.reason]
+          .join(" ")
+          .toLowerCase()
+          .includes(q);
+      });
+
+    list.sort((a,b) => {
+      if (sby === "category") return (a.category || "").localeCompare(b.category || "");
+      if (sby === "time")     return toTimeKey(a.time).localeCompare(toTimeKey(b.time));
+
+      const d = (a.date || "").localeCompare(b.date || "");
+      return d !== 0 ? d : toTimeKey(a.time).localeCompare(toTimeKey(b.time));
+    });
+
+    renderTable(list);
+  }
+
+  function renderTable(rows){
+    tbody.innerHTML = "";
+
+    if (!rows.length){
+      tbody.innerHTML = `<tr><td colspan="7" class="muted small">${t("no_upcoming","No upcoming appointments.")}</td></tr>`;
+      return;
+    }
+
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      const safeReason = escapeHTML(r.reason || "—");
+
+      tr.innerHTML = `
+        <td>${escapeHTML(r.studentName)}</td>
+        <td>${escapeHTML(r.withName)}</td>
+        <td>${escapeHTML(r.category || "—")}</td>
+        <td>${escapeHTML(shortDate(r.date))}</td>
+        <td>${escapeHTML(r.time || "—")}</td>
+        <td></td>
+        <td><div class="truncate-2" title="${safeReason}">${safeReason}</div></td>
+      `;
+
+      tr.children[5].appendChild(statusBadge(r.status));
+      tr.addEventListener("click", () => openModal(r));
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function loadUpcoming(){
+    try{
+      const res  = await fetch("/staff/overview");
+      const data = res.ok ? await res.json() : [];
+      ALL        = (Array.isArray(data) ? data : []).map(normalize);
+
+      const cats = uniqueCategories(ALL);
+      catFilterEl.innerHTML =
+        `<option value="all">${t("all","All")}</option>` +
+        cats.map(c => `<option>${escapeHTML(c)}</option>`).join("");
+
+      if (user?.staffCategory && cats.includes(user.staffCategory)) {
+        catFilterEl.value = user.staffCategory;
+        catHintEl.textContent = `(${t("auto_filtered","auto-filtered to your category")}: ${user.staffCategory})`;
+      } else {
+        catHintEl.textContent = "";
+      }
+
+      applyFilters();
+    }catch(e){
+      console.error(e);
+      tbody.innerHTML =
+        `<tr><td colspan="7" class="muted small">${t("load_failed","Failed to load.")}</td></tr>`;
+    }
+  }
+
+  /* --- History search (normalize like Upcoming, then render) --- */
+  async function loadStudentHistory(q){
+    const body = document.getElementById("historyBody");
+    const hint = document.getElementById("historyHint");
+
+    if (!q || !q.trim()) {
+      body.innerHTML =
+        `<tr><td colspan="7" class="muted small">${t("enter_query_hint","Enter a student name or ID and press Search.")}</td></tr>`;
+      hint.textContent = "";
+      return;
+    }
+
+    body.innerHTML =
+      `<tr><td colspan="7" class="muted small">${t("loading","Loading…")}</td></tr>`;
+    hint.textContent = "";
+
+    try{
+      const res = await fetch(`/staff/student-history?q=${encodeURIComponent(q.trim())}`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const { items = [] } = await res.json();
+
+      body.innerHTML = "";
+
+      if (!items.length){
+        body.innerHTML =
+          `<tr><td colspan="7" class="muted small">${t("no_history","No appointment history found.")}</td></tr>`;
+        hint.textContent = `${t("query","Query")}: "${q.trim()}"`;
+        return;
+      }
+
+      const rows = items.map(it => {
+        const date   = it.dateISO || it.date || it.createdAt || "";
+        const time   = it.timeLabel || it.time || it.slot || "—";
+        const status = normalizeStatus(it.status, date);
+
+        return {
+          id: it.id,
+          studentName: it.studentName || it.student?.name || it.student?.username || t("student","Student"),
+          studentId: it.studentId ?? it.student?.id ?? "—",
+          withName: it.withName || it.facultyName || it.faculty?.name || it.faculty?.username || "—",
+          category: it.category || it.type || "—",
+          date,
+          time,
+          status,
+          reason: pickReason(it) || "—"
+        };
+      });
+
+      rows.forEach(r => {
+        const safeReason = escapeHTML(r.reason || "—");
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${escapeHTML(r.studentName)} <span class="muted small">(ID: ${escapeHTML(r.studentId)})</span></td>
+          <td>${escapeHTML(r.withName)}</td>
+          <td>${escapeHTML(r.category)}</td>
+          <td>${escapeHTML(shortDateISO(r.date))}</td>
+          <td>${escapeHTML(r.time)}</td>
+          <td></td>
+          <td><div class="truncate-2" title="${safeReason}">${safeReason}</div></td>
+        `;
+
+        tr.children[5].appendChild(statusBadge(r.status));
+
+        tr.addEventListener("click", () => openModal({
+          id: r.id,
+          studentName: r.studentName,
+          withName: r.withName,
+          category: r.category,
+          status: r.status,
+          date: r.date,
+          time: r.time,
+          reason: r.reason
+        }));
+
+        body.appendChild(tr);
+      });
+
+      hint.textContent =
+        `${t("showing","Showing")} ${rows.length} ${t("records","record(s)")} ${t("for","for")} "${q.trim()}"`;
+    }catch(e){
+      console.error(e);
+      body.innerHTML =
+        `<tr><td colspan="7" class="muted small">${t("history_failed","Failed to load history.")}</td></tr>`;
+      hint.textContent = "";
+    }
+  }
+
+  const historyInput = document.getElementById("historySearch");
+  document.getElementById("historyGo")
+    .addEventListener("click", () => loadStudentHistory(historyInput.value));
+  historyInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") loadStudentHistory(historyInput.value);
+  });
+
+  /* ===== Modal ===== */
+  const backdrop = document.getElementById("modalBackdrop");
+
+  function openModal(r){
+    document.getElementById("modalTitle").textContent =
+      `${t("appointment_details","Appointment details")} #${r.id || ""}`;
+    document.getElementById("mStudent").textContent  = r.studentName || "—";
+    document.getElementById("mWith").textContent     = r.withName || "—";
+    document.getElementById("mCategory").textContent = r.category || "—";
+    document.getElementById("mStatus").textContent   = r.status || "WAITING";
+    document.getElementById("mDate").textContent     = r.date || "—";
+    document.getElementById("mTime").textContent     = r.time || "—";
+    document.getElementById("mReason").textContent =
+      (typeof r.reason === "string" ? r.reason : pickString(r.reason)) || "—";
+
+    const filesWrap = document.getElementById("mFiles");
+    const noFiles   = document.getElementById("mNoFiles");
+    filesWrap.innerHTML = "";
+    let any = false;
+
+    if (r.transcript){
+      any = true;
+      filesWrap.insertAdjacentHTML(
+        "beforeend",
+        `<a href="${r.transcript}" target="_blank" rel="noopener">
+           <i class="fa fa-file-lines"></i> ${t("transcript","Transcript")}
+         </a>`
+      );
+    }
+
+    if (r.payment){
+      any = true;
+      filesWrap.insertAdjacentHTML(
+        "beforeend",
+        `<a href="${r.payment}" target="_blank" rel="noopener">
+           <i class="fa fa-file-invoice-dollar"></i> ${t("payment_proof","Payment Proof")}
+         </a>`
+      );
+    }
+
+    noFiles.style.display = any ? "none" : "inline";
+
+    backdrop.style.display = "flex";
+    backdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal(){
+    backdrop.style.display = "none";
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+
+  document.getElementById("closeModal").addEventListener("click", closeModal);
+  document.getElementById("closeModal2").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  /* ===== Events & boot ===== */
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("user");
+    location.href = "/login";
+  });
+
+  document.getElementById("langSwitch").addEventListener("change", (e) => {
+    if (window.PSUi18n){
+      PSUi18n.setLang(e.target.value);
+      PSUi18n.apply(document.body);
+    }
+    setPlaceholder(searchBoxEl, "search_hint", "Search student / with / reason…");
+    if (ALL.length) applyFilters(); else loadUpcoming();
+  });
+
+  document.getElementById("searchBox").addEventListener("input",  applyFilters);
+  document.getElementById("sortBy").addEventListener("change",    applyFilters);
+  document.getElementById("catFilter").addEventListener("change", applyFilters);
+
+  (async () => {
+    if (i18nReady?.then){
+      try { await i18nReady; } catch {}
+    }
+
+    if (window.PSUi18n){
+      PSUi18n.apply(document.body);
+      const active = (PSUi18n.getLang?.() || document.documentElement.lang || "en");
+      const sel    = document.getElementById("langSwitch");
+      if (sel && sel.value !== active) sel.value = active;
+      document.documentElement.lang = active;
+      document.documentElement.dir  = (active === "ar") ? "rtl" : "ltr";
+    }
+
+    setPlaceholder(searchBoxEl, "search_hint", "Search student / with / reason…");
+    loadUpcoming();
+  })();
+})();
+
+</script>
+
+</body>
+</html>

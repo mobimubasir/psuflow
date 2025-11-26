@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title data-i18n="staff_inbox_title"><%= title || "PSUFlow Staff Inbox" %></title>
+
+  <!-- i18n FIRST -->
+  <script src="/js/i18n.js"></script>
+
+  <link rel="stylesheet" href="/css/studentdashboard.css"><!-- if you reuse base styles -->
+
+  <style>
+    *{ box-sizing:border-box; font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif; }
+    body{ margin:0; background:#eaf3fb; transition:direction .2s ease; }
+
+    /* ====== Layout ====== */
+    .layout{
+      display:flex;
+      min-height:100vh;
+      width:100%;
+    }
+
+    /* ====== Sidebar (same style as dashboard) ====== */
+    .sidebar{
+      width:300px;
+      background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+      color:#fff;
+      padding:20px 0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      position:sticky;
+      top:0;
+    }
+    /* Language switch (frosted) */
+    #langSwitch{
+      width: 85%;
+      padding: 10px 14px;
+      margin: 12px auto 24px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      text-align: center;
+      cursor: pointer;
+      outline: none;
+      transition: background .25s ease, border-color .25s ease, transform .05s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      backdrop-filter: blur(4px);
+    }
+    #langSwitch:hover,#langSwitch:focus{ background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.8); transform: translateY(1px); }
+    #langSwitch option{ color:#1e60ff; background:#fff; font-weight:600; }
+    html[dir="rtl"] #langSwitch{ text-align:right; }
+
+    /* Sidebar nav (accepts <nav><ul> or plain <ul>) */
+    .sidebar .nav,
+    .sidebar nav ul,
+    .sidebar > nav > ul,
+    .sidebar > ul{
+      list-style:none; padding:0; margin:0; width:100%;
+    }
+    .sidebar .nav li,
+    .sidebar nav ul li,
+    .sidebar > ul > li{
+      padding:12px 30px; display:flex; align-items:center; gap:10px; cursor:pointer;
+    }
+    .sidebar a{
+      text-decoration:none; color:#fff; display:block; width:100%;
+      margin:10px 0; padding:10px 12px; border-radius:8px;
+      transition: background .3s, transform .06s ease;
+      line-height:1.25; white-space:normal; word-break:break-word;
+    }
+    .sidebar .nav li:hover,
+    .sidebar nav ul li:hover,
+    .sidebar > ul > li:hover{ background-color: rgba(255,255,255,0.10); }
+    .sidebar a:hover{ background-color: rgba(255,255,255,0.18); transform: translateY(1px); }
+    .sidebar a.active{ background-color: rgba(255,255,255,0.22); font-weight:700; }
+    .sidebar a i{ min-width:18px; }
+
+    /* Logout */
+    .logout-btn{
+      margin-top:auto; margin-bottom:20px; padding:10px 20px;
+      background:#fff; color:#1e60ff; border:none; border-radius:8px;
+      cursor:pointer; font-weight:700; transition: filter .2s ease, transform .06s ease, background .2s ease;
+    }
+    .logout-btn:hover{ background:#f0f0f0; }
+    .logout-btn:active{ transform: translateY(1px); }
+
+    html[dir="rtl"] .sidebar .nav li{ flex-direction:row-reverse; }
+    html[dir="rtl"] .sidebar a i{ min-width:18px; }
+
+    /* ====== Main ====== */
+    .main{
+      flex:1;
+      padding:28px 32px 56px;
+    }
+    .header{
+      display:flex; align-items:center; gap:14px; margin-bottom:14px;
+    }
+    .logo{ width:120px; height:auto; display:block; }
+    h1{ margin:0; color:#1a1a1a; }
+    h1 .blue{ color:#1a73e8; }
+
+    /* ====== Inbox list ====== */
+    .card{ background:#fff; border-radius:12px; padding:16px 18px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    .inbox-list{ display:flex; flex-direction:column; gap:12px; }
+    .inbox-item{
+      background:#fff; border-radius:12px; padding:18px 22px;
+      display:flex; justify-content:space-between; align-items:center;
+      box-shadow:0 1px 3px rgba(0,0,0,0.08);
+    }
+    .text{ max-width:78%; }
+    .line-1{ display:flex; align-items:center; gap:8px; font-size:16px; }
+    .label{ font-weight:700; margin-inline-end:6px; }
+    .meta{ margin-top:6px; color:#333; font-size:14px; }
+    .date-chip{
+      color:#1a1a1a; font-size:14px; background:#f2f4f7; padding:8px 14px; border-radius:8px; min-width:72px; text-align:center;
+    }
+    .muted{ color:#667085; }
+    .truncate-2{
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+      overflow:hidden; white-space:pre-wrap; word-break:break-word;
+    }
+
+    /* Badges (match dashboard) */
+    .badge{ font-size:12px; padding:4px 10px; border-radius:12px; margin-inline-start:8px; color:#fff; white-space:nowrap; }
+    .waiting{ background:#f4b400; }
+    .in-progress{ background:#1e90ff; }
+    .confirmed,.completed{ background:#34a853; }
+    .canceled{ background:#e74c3c; }
+    .rescheduled{ background:#8e44ad; }
+
+    /* Mobile */
+    @media (max-width: 980px){
+      .layout{ flex-direction:column; }
+      .sidebar{ width:100%; height:auto; position:relative; }
+      .main{ padding:24px 16px 56px; }
+      .text{ max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <select id="langSwitch">
+      <option value="en" data-i18n="english">English</option>
+      <option value="ar" data-i18n="arabic">العربية</option>
+    </select>
+
+    <nav>
+      <ul>
+        <li><a href="/staffdashboard"><i class="fas fa-home"></i> <span data-i18n="dashboard">Dashboard</span></a></li>
+        <li><a class="active" href="/staffinbox"><i class="fas fa-inbox"></i> <span data-i18n="inbox">Inbox</span></a></li>
+  
+      </ul>
+    </nav>
+
+    <button class="logout-btn" id="logoutBtn">
+      <i class="fa fa-sign-out-alt"></i> <span data-i18n="logout_button">Logout</span>
+    </button>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="logo" />
+      <h1>PSU<span class="blue">Flow</span> <span data-i18n="staff_inbox_title">Staff Inbox</span></h1>
+    </div>
+
+    <div class="card">
+      <div class="inbox-list" id="inboxContainer">
+        <div class="inbox-item" id="placeholder">
+          <div class="text">
+            <div class="line-1">
+              <span class="label muted" data-i18n="loading">Loading…</span>
+            </div>
+            <div class="meta muted" data-i18n="please_wait">Please wait</div>
+          </div>
+          <div class="date-chip">—</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Font Awesome (only if you’re not already loading it globally) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+<script>
+(function(){
+  /* ---------- small helpers ---------- */
+  const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+  const escapeHTML = (s="") => String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+  function fmtDay(iso){
+    if(!iso) return "—";
+    try{
+      const d = new Date(iso + 'T00:00:00');
+      return d.toLocaleDateString(document.documentElement.lang || undefined, {month:'short', day:'numeric'});
+    }catch{ return iso; }
+  }
+
+  function statusBadge(statusRaw){
+    const span = document.createElement('span');
+    const s = (statusRaw || "").toUpperCase();
+    let cls='waiting', txt=t('waiting','Waiting');
+    if (s.includes('PROGRESS')) { cls='in-progress'; txt=t('in_progress','In Progress'); }
+    else if (s.includes('CONFIRM') || s.includes('COMPLETE')) { cls='confirmed'; txt=t('confirmed','Confirmed'); }
+    else if (s.includes('CANCEL')) { cls='canceled'; txt=t('canceled','Canceled'); }
+    else if (s.includes('RESCHED')) { cls='rescheduled'; txt=t('rescheduled','Rescheduled'); }
+    span.className = 'badge ' + cls; span.textContent = txt; return span;
+  }
+
+  // Reason picker (accepts reason or category as fallback)
+  function pickReason(a={}){
+    const candidates = [
+      a.reason, a.reasonText, a.studentReason, a.visitReason, a.appointmentReason, a.reasonForVisit,
+      a.notes, a.note, a.description, a.details
+    ];
+    for (const c of candidates){
+      if (typeof c === 'string' && c.trim()) return c.trim();
+    }
+    // nested common buckets
+    const buckets = [a.payload, a.data, a.meta, a.extra, a.context, a.form, a.fields];
+    for (const b of buckets){
+      if (b && typeof b === 'object'){
+        const v = pickReason(b);
+        if (v) return v;
+      }
+    }
+    // final fallback: some APIs abuse "category" to mean reason
+    return a.category || "";
+  }
+
+  /* ---------- i18n boot ---------- */
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect:"#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+      const sel = document.getElementById("langSwitch");
+      if (sel && sel.value !== lang) sel.value = lang;
+      if (window.PSUi18n) PSUi18n.apply(document.body);
+      renderOrFetch(); // repaint on language change
+    }
+  });
+
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const container = document.getElementById('inboxContainer');
+  let LAST = [];
+
+  function makeItem({ studentName, withName, dateISO, timeLabel, reason, status }){
+    const wrap = document.createElement('div');
+    wrap.className = 'inbox-item';
+    wrap.setAttribute('role','group');
+    wrap.setAttribute('aria-label', t('appointment_notification','Appointment notification'));
+
+    const left = document.createElement('div'); left.className = 'text';
+
+    // line 1: Student + badge
+    const line1 = document.createElement('div'); line1.className = 'line-1';
+    const lbl = document.createElement('span'); lbl.className = 'label'; lbl.textContent = t('student','Student') + ': ';
+    line1.appendChild(lbl);
+    line1.append(document.createTextNode(studentName || t('student','Student')));
+    line1.appendChild(statusBadge(status));
+
+    // line 2: With + Date + Time
+    const line2 = document.createElement('div'); line2.className = 'meta';
+    line2.textContent = `${t('with','With')}: ${withName || '—'}  •  ${t('date','Date')}: ${fmtDay(dateISO)}  •  ${t('time','Time')}: ${timeLabel || '—'}`;
+
+    // line 3: Reason
+    const line3 = document.createElement('div'); line3.className = 'meta truncate-2';
+    line3.innerHTML = `<strong>${t('reason','Reason')}:</strong> ${escapeHTML(reason || '—')}`;
+
+    left.append(line1, line2, line3);
+
+    const right = document.createElement('div'); right.className = 'date-chip';
+    right.textContent = fmtDay(dateISO);
+
+    wrap.append(left, right);
+    return wrap;
+  }
+
+  function normalizeItem(a){
+    return {
+      studentName: a.studentName || a.student?.name || a.student?.username || t('student','Student'),
+      withName:    a.facultyName || a.with || a.faculty?.name || a.faculty?.username || '—',
+      dateISO:     a.dateISO || a.date || '',
+      timeLabel:   a.timeLabel || a.time || '',
+      reason:      pickReason(a),
+      status:      a.status || 'waiting'
+    };
+  }
+
+  function render(list){
+    container.innerHTML = '';
+    if(!Array.isArray(list) || !list.length){
+      container.appendChild(
+        makeItem({
+          studentName: t('no_recent_activity','No recent activity'),
+          withName:'', dateISO:'', timeLabel:'',
+          reason: t('new_items_hint','New items will appear here'),
+          status: 'waiting'
+        })
+      );
+      return;
+    }
+    list.slice(0, 30).forEach(d => container.appendChild(makeItem(d)));
+  }
+
+  async function fetchInbox(){
+    if(!user?.id || (user.role !== 'staff' && user.role !== 'admin')){
+      render([{ studentName: t('not_signed_in','Not signed in'), withName:'', dateISO:'', timeLabel:'', reason:t('login_as_staff','Please login as staff to view inbox'), status:'waiting' }]);
+      LAST = [];
+      return;
+    }
+    try{
+      const res  = await fetch(`/appointments/reason/${user.id}`);
+      const data = res.ok ? await res.json() : [];
+      const list = (Array.isArray(data) ? data : [])
+        .map(normalizeItem)
+        .sort((a,b) => (b.dateISO || '').localeCompare(a.dateISO || '')); // newest first
+      LAST = list;
+      render(LAST);
+    }catch(e){
+      console.error(e);
+      LAST = [];
+      render([{ studentName:t('network_error','Network error'), withName:'', dateISO:'', timeLabel:'', reason:t('try_again','Please try again'), status:'waiting' }]);
+    }
+  }
+
+  function renderOrFetch(){ LAST.length ? render(LAST) : fetchInbox(); }
+
+  /* ---------- events ---------- */
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('user'); location.href='/login';
+  });
+
+  document.getElementById('langSwitch').addEventListener('change', (e) => {
+    if (window.PSUi18n){
+      PSUi18n.setLang(e.target.value);
+      PSUi18n.apply(document.body);
+    }
+    renderOrFetch();
+  });
+
+  /* ---------- boot ---------- */
+  (async () => {
+    if (i18nReady?.then) { try { await i18nReady; } catch{} }
+    if (window.PSUi18n){
+      PSUi18n.apply(document.body);
+      const active = (PSUi18n.getLang?.() || document.documentElement.lang || "en");
+      const sel = document.getElementById("langSwitch");
+      if (sel && sel.value !== active) sel.value = active;
+      document.documentElement.lang = active;
+      document.documentElement.dir  = (active === "ar") ? "rtl" : "ltr";
+    }
+    fetchInbox();
+  })();
+})();
+</script>
+
+</body>
+</html>

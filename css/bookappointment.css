@@ -1,0 +1,370 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #e8f2fc;
+  }
+  
+  .container {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 250px;
+    background: linear-gradient(to bottom, #1e90ff, #1e60ff);
+    color: white;
+    padding: 20px 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .logo {
+    width: 120px;
+    margin-bottom: 30px;
+  }
+  
+  .nav {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+  }
+  
+  .nav li {
+    padding: 12px 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+   
+    .sidebar a {
+      text-decoration: none;
+      color: white;
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+
+  .nav li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+ .logout {
+    margin-top: auto;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background-color: white;
+    color: #1e60ff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  
+  .logout:hover {
+    background-color: #f0f0f0;
+  }
+  
+  
+  .main-content {
+    flex: 1;
+    padding: 40px;
+  }
+  
+  .main-content h1 {
+    font-size: 26px;
+    margin-bottom: 20px;
+  }
+  
+  .highlight {
+    color: #1e60ff;
+  }
+  
+  .booking-box {
+    background-color: #dfe9f6;
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  .booking-text {
+    font-size: 18px;
+    background-color: #c8d4e2;
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .booking-grid {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  
+  .calendar-box {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  
+  .month {
+    font-weight: bold;
+    color: #1e60ff;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  
+  .calendar {
+    border-collapse: collapse;
+    width: 100%;
+    text-align: center;
+  }
+  
+  .calendar th, .calendar td {
+    padding: 10px;
+    border-radius: 6px;
+  }
+  
+  .calendar td:hover {
+    background-color: #f0f8ff;
+    cursor: pointer;
+  }
+  
+  .selected {
+    border: 2px solid #1e60ff;
+    border-radius: 50%;
+    font-weight: bold;
+  }
+  
+  .faded {
+    color: #ccc;
+  }
+  
+  .slots-box {
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    flex: 1;
+  }
+  
+  .slots-title {
+    margin-bottom: 20px;
+    font-weight: bold;
+  }
+  
+  .slot {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    background-color: #dce9f8;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .slot:hover {
+    background-color: #b3d3f7;
+  }
+  
+  .select-person {
+  margin: 15px 0;
+  font-family: 'Arial', sans-serif;
+}
+
+.select-person label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.select-person select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.select-person select:focus {
+  outline: none;
+  border-color: #007BFF;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.select-person option {
+  padding: 5px;
+}
+
+.select-person optgroup {
+  font-weight: bold;
+  color: #555;
+}
+
+/* Book Appointment Button */
+.book-btn {
+  background-color: #1e90ff;       /* blue button */
+  color: #fff;                     /* white text */
+  border: none;                    /* remove border */
+  border-radius: 8px;              /* rounded corners */
+  padding: 12px 25px;              /* top-bottom, left-right */
+  font-size: 16px;                 /* text size */
+  font-weight: bold;
+  cursor: pointer;                 /* pointer on hover */
+  transition: all 0.3s ease;       /* smooth hover transition */
+  margin: 15px 0;                  /* spacing around button */
+  display: inline-block;
+}
+
+/* Hover effect */
+.book-btn:hover {
+  background-color: #0d6efd;       /* darker blue on hover */
+  transform: translateY(-2px);     /* slight lift */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Active (clicked) effect */
+.book-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Alert container */
+#alert-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+/* Individual alert box */
+.alert {
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  opacity: 0;
+  animation: fadeIn 0.5s forwards, fadeOut 0.5s 2.5s forwards;
+}
+
+/* Alert types */
+.alert.success { background-color: #3ba9db; }
+.alert.warning { background-color: #307ca8; }
+.alert.error { background-color: #f44336; }
+.alert.info { background-color: #2196f3; }
+
+/* Animations */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
+/* New code for ST-US7 */
+.select-category {
+    margin-bottom: 20px;
+}
+
+.select-category label {
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.select-category select {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #f9f9f9;
+}
+
+/* css for ST-US6 to ensure the new attachment section looks clean and integrated */
+/* Styling for the new attachments section */
+.attachments-section {
+    margin: 20px 0;
+    padding: 20px;
+    background-color: #f5f8fd;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.attachments-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.attachments-placeholder {
+    padding: 10px;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.attachments-placeholder p.muted {
+    margin: 0;
+}
+
+.file-input-group {
+    margin-bottom: 15px;
+}
+
+.file-input-group label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.file-input-group input[type="file"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: white;
+}
+/* --- Centralize UI states used by bookappointment.ejs --- */
+
+/* Slot states */
+.slot[disabled] { opacity: 0.5; cursor: not-allowed; }
+.slot.available { border: 2px solid #2ecc71; }
+.slot.full      { border: 2px solid #e74c3c; }
+.day.selected,
+.slot.selected  { outline: 2px solid #4b7bec; }
+
+/* Inline notice → global styles */
+.notice {
+  font-size: 18px;
+  line-height: 1.5;
+  background: #1a73e8;
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin: 12px 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+}
+.notice.notice-error   { background: #b00020; }
+.notice.notice-success { background: #198754; }
+
+/* Small polish for inputs */
+.file-input-group input[type="file"]:focus {
+  outline: none;
+  border-color: #1e60ff;
+  box-shadow: 0 0 0 3px rgba(30,96,255,.15);
+}
+
+/* Responsive: stack calendar/slots on narrow screens */
+@media (max-width: 768px) {
+  .booking-grid { flex-direction: column; gap: 20px; }
+}

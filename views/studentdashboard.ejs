@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title data-i18n="student_dashboard_title"><%= title || "PSUFlow Student Dashboard" %></title>
+
+  <!-- i18n must load before inline script -->
+  <script src="/js/i18n.js"></script>
+
+  <link rel="stylesheet" href="/css/studentdashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .muted{color:#666}
+    .badge{ padding:4px 10px; border-radius:12px; font-size:12px; color:#fff; margin-inline-start:6px; }
+    .waiting{ background:#f4b400; }
+    .in-progress{ background:#1e90ff; }
+    .completed, .confirmed{ background:#34a853; }
+    .canceled{ background:#e74c3c; }
+    .rescheduled{ background:#8e44ad; }
+
+    /* Buttons */
+    .btn{
+      appearance:none; border:0; cursor:pointer;
+      padding:8px 12px; border-radius:10px; font-weight:600;
+      transition:transform .06s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
+      box-shadow:0 1px 2px rgba(0,0,0,.06);
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn-primary{ background:#1a73e8; color:#fff; }
+    .btn-primary:hover{ background:#1669cf; }
+    .btn-danger{ background:#b00020; color:#fff; }
+    .btn-danger:hover{ background:#9a001b; }
+
+    /* lightweight toast for fallback when notifications are blocked */
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+      background: #1a73e8; color: #fff; padding: 10px 14px; border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 14px; display: none; z-index: 9;
+    }
+    .toast.show { display:block; }
+
+    /* Updates card list */
+    .updates-list{ list-style:none; padding-left:0; margin:8px 0 0;}
+    .updates-list li{
+      display:flex; align-items:flex-start; gap:8px;
+      padding:8px 10px; border:1px solid #e7eef8; border-radius:10px; margin-bottom:8px;
+      background:#fbfdff;
+    }
+    .updates-list li .time{ font-size:12px; color:#667; margin-left:auto; white-space:nowrap; }
+    .updates-list li.unread{ border-color:#1a73e8; box-shadow:0 0 0 2px rgba(26,115,232,.08) inset; }
+/* ==========================
+   PSUFlow — Unified Sidebar (Student)
+   ========================== */
+.container{
+  display:flex;
+  min-height:100vh;
+}
+
+.main-content{
+  flex:1;
+  padding:20px;
+}
+
+/* Sidebar */
+.sidebar{
+  width:260px;
+  background: linear-gradient(180deg, #1e90ff, #1e60ff);
+  color:#fff;
+  padding:18px 0 12px;
+  height:100vh;
+  position:sticky; top:0;
+  display:flex; flex-direction:column; align-items:stretch;
+  box-shadow: 0 6px 24px rgba(26, 96, 255, .18);
+}
+
+/* Brand */
+.sidebar .brand{
+  display:flex; align-items:center; gap:10px;
+  padding:0 18px 10px; margin-bottom:8px;
+}
+.sidebar .brand img{ width:36px; height:36px; border-radius:10px; }
+.sidebar .brand .title{ font-weight:800; letter-spacing:.3px; }
+
+/* Language select (improved) */
+.lang-row{
+  padding:0 18px; margin:8px 0 12px;
+}
+#langSwitch{
+  width:90%; padding:10px 12px; border-radius:10px;
+  border:1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.16);
+  color:#fff; font-weight:600; outline:none; cursor:pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1);
+  -webkit-appearance: none; appearance: none;
+}
+#langSwitch option{ color:#111; background:#fff; }
+
+/* Nav */
+.sidebar nav{ padding: 4px 8px; }
+.sidebar nav ul{ list-style:none; padding:0; margin:0; }
+.sidebar nav li{ margin:4px 0; }
+.sidebar nav a{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; margin:0 10px; border-radius:10px;
+  text-decoration:none; color:#fff; line-height:1.2;
+  transition: background .25s, transform .06s;
+}
+.sidebar nav a i{ min-width:18px; }
+.sidebar nav a:hover{ background: rgba(255,255,255,.14); transform: translateY(1px); }
+.sidebar nav a.active{ background: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); font-weight:700; }
+
+/* Footer action */
+.logout-btn{
+  margin: auto 18px 16px;
+  padding:10px 14px; border-radius:10px; border:none;
+  background:#fff; color:#1e60ff; font-weight:800; cursor:pointer;
+  transition: filter .2s, transform .06s;
+}
+.logout-btn:hover{ filter: brightness(.96); }
+.logout-btn:active{ transform: translateY(1px); }
+
+/* RTL support */
+html[dir="rtl"] .sidebar nav a{ flex-direction: row-reverse; }
+html[dir="rtl"] .sidebar nav a i{ min-width:18px; }
+
+/* Mobile */
+@media (max-width: 980px){
+  .container{ flex-direction:column; }
+  .sidebar{ width:100%; height:auto; position:relative; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <select id="langSwitch" style="margin:8px; border-radius:6px;">
+        <option value="en" data-i18n="english">English</option>
+        <option value="ar" data-i18n="arabic">العربية</option>
+      </select>
+
+      <nav>
+        <ul>
+          <li><a class="active" href="/studentdashboard"><i class="fas fa-home"></i> <span data-i18n="dashboard">Dashboard</span></a></li>
+          <li><a href="/bookappointment"><i class="fas fa-calendar-plus"></i> <span data-i18n="book_appointment">Book Appointment</span></a></li>
+          <li><a href="/myappointments"><i class="fas fa-calendar-check"></i> <span data-i18n="my_appointments">My Appointments</span></a></li>
+        </ul>
+      </nav>
+      <button class="logout-btn btn btn-danger" id="logoutBtn">
+        <i class="fa fa-sign-out-alt"></i> <span data-i18n="logout_button">Logout</span>
+      </button>
+    </aside>
+
+    <main class="main-content">
+      <div class="dashboard-header">
+        <img src="/assets/PSUFlow-logo.png" alt="PSUFlow Logo" class="dashboard-logo">
+        <h1>PSU<span class="blue">Flow</span> <span data-i18n="student_dashboard_title">Student Dashboard</span></h1>
+      </div>
+
+      <div class="cards">
+        <div class="card" id="upcoming-card" style="width:100%">
+          <h3 data-i18n="upcoming_appointment">Upcoming Appointment</h3>
+          <p id="appt-date"><strong data-i18n="no_appointment">No appointment booked</strong></p>
+          <p id="appt-time" class="muted"></p>
+          <p id="appt-dept" class="muted"></p>
+          <p id="appt-status"></p>
+
+          <!-- Notifications controls -->
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="notifyBtn" class="btn btn-primary" style="display:none;">
+              <i class="fa fa-bell"></i> <span data-i18n="enable_notifications">Enable notifications</span>
+            </button>
+            <button id="disableNotifyBtn" class="btn btn-outline" style="display:none;">
+              <i class="fa fa-bell-slash"></i> <span data-i18n="disable_notifications">Disable notifications</span>
+            </button>
+          </div>
+        </div>
+        <!-- Status Updates -->
+        <div class="card" id="updates-card" style="width:100%">
+          <h3 data-i18n="updates">Updates</h3>
+          <ul id="updatesList" class="updates-list">
+            <li class="muted" data-i18n="no_updates">No updates yet</li>
+          </ul>
+          <div class="small muted" id="updatesFoot"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- fallback toast -->
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  /* ---------- i18n boot ---------- */
+  const i18nReady = window.PSUi18n?.init?.({
+    langSelect: "#langSwitch",
+    onApplied(lang){
+      document.documentElement.lang = lang;
+      document.documentElement.dir  = (lang === "ar") ? "rtl" : "ltr";
+      paintDynamic(); // refresh dynamic text whenever language is applied
+      updateNotifyUI(); // keep UI in sync
+    }
+  });
+  const t = (k, fb="") => (window.PSUi18n ? PSUi18n.t(k, fb) : (fb || k));
+
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  /* ---------- small helpers ---------- */
+  function showToast(msg, ok=true){
+    const tEl=document.getElementById("toast");
+    tEl.textContent=msg; tEl.style.background = ok ? "#1a73e8" : "#b00020";
+    tEl.classList.add("show"); setTimeout(()=>tEl.classList.remove("show"), 2500);
+  }
+  function statusBadge(statusRaw) {
+    const span = document.createElement('span');
+    const status = (statusRaw || "").toUpperCase();
+    let cls = "waiting", text = t("waiting","Waiting");
+    if (status.includes("PROGRESS")) { cls = "in-progress"; text = t("in_progress","In Progress"); }
+    else if (status.includes("COMPLETE") || status.includes("CONFIRM")) { cls = "completed"; text = t("completed","Completed"); }
+    else if (status.includes("CANCEL")) { cls = "canceled"; text = t("canceled","Canceled"); }
+    else if (status.includes("RESCHED")) { cls = "rescheduled"; text = t("rescheduled","Rescheduled"); }
+    span.className = "badge " + cls; span.textContent = text; return span;
+  }
+  function niceLong(iso){
+    try{
+      const d=new Date(iso+"T00:00:00");
+      return d.toLocaleDateString(document.documentElement.lang || undefined,{month:"short",day:"numeric",year:"numeric"});
+    } catch { return iso; }
+  }
+  function isFutureOrToday(iso){
+    const t=new Date(); t.setHours(0,0,0,0);
+    const d=new Date(iso+"T00:00:00");
+    return d.getTime()>=t.getTime();
+  }
+  function hhmmToDate(iso, timeLabel){
+    const [hm, ap] = (timeLabel||"").split(" ");
+    const [hStr, mStr] = (hm||"").split(":");
+    const h = Number(hStr), m = Number(mStr);
+    if (!iso || isNaN(h) || isNaN(m)) return null;
+    const d = new Date(iso+"T00:00:00");
+    let hour = h % 12; if (/pm/i.test(ap)) hour += 12;
+    d.setHours(hour, m, 0, 0);
+    return d;
+  }
+  function minsUntil(dt){
+    if (!dt) return null;
+    return Math.round((dt.getTime() - Date.now()) / 60000);
+  }
+
+  /* ---------- Notification setup (ST-US3) ---------- */
+  const notifyBtn = document.getElementById("notifyBtn");
+  const disableBtn = document.getElementById("disableNotifyBtn");
+  const DISABLE_KEY = "psuflow:notifDisabled";
+
+  const isAppNotifDisabled = () => localStorage.getItem(DISABLE_KEY) === "1";
+  const setAppNotifDisabled = (v) => v ? localStorage.setItem(DISABLE_KEY, "1") : localStorage.removeItem(DISABLE_KEY);
+
+  async function ensureSW(){
+    try {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/assets/psuflow-sw.js');
+      }
+    } catch { /* no-op */ }
+  }
+
+  function updateNotifyUI(){
+    const perm = ("Notification" in window) ? Notification.permission : "denied";
+    const muted = isAppNotifDisabled();
+
+    if (perm !== "granted") {
+      notifyBtn.style.display = "inline-block";
+      disableBtn.style.display = "none";
+    } else if (muted) {
+      notifyBtn.style.display = "inline-block";
+      disableBtn.style.display = "none";
+    } else {
+      notifyBtn.style.display = "none";
+      disableBtn.style.display = "inline-block";
+    }
+  }
+
+  async function askPermission(){
+    try{
+      if (!("Notification" in window)) {
+        showToast(t("browser_no_notifications","This browser does not support notifications"), false);
+        return;
+      }
+      setAppNotifDisabled(false);
+      const perm = await Notification.requestPermission();
+      if (perm === "granted"){
+        await ensureSW();
+        showToast(t("notifications_enabled","Notifications enabled"));
+      } else {
+        showToast(t("notifications_blocked","Notifications blocked. We'll show in-page alerts."), false);
+      }
+    } catch(e){
+      showToast(t("notifications_enable_failed","Could not enable notifications"), false);
+    } finally {
+      updateNotifyUI();
+    }
+  }
+
+  function disableNotifications(){
+    setAppNotifDisabled(true);
+    showToast(t("notifications_disabled","Notifications disabled"));
+    updateNotifyUI();
+  }
+
+  notifyBtn.addEventListener("click", askPermission);
+  disableBtn.addEventListener("click", disableNotifications);
+  updateNotifyUI(); ensureSW();
+
+  // dedupe notices (per appointment id & day)
+  function notifiedKey(kind, value){ return `notified:${kind}:${value}`; }
+  function wasNotified(kind, value){
+    const k = notifiedKey(kind, value);
+    const v = localStorage.getItem(k);
+    const today = new Date().toISOString().slice(0,10);
+    return v === today;
+  }
+  function markNotified(kind, value){
+    localStorage.setItem(notifiedKey(kind, value), new Date().toISOString().slice(0,10));
+  }
+
+  function fireNotification(title, body){
+    if (isAppNotifDisabled()) return;
+    if ("Notification" in window && Notification.permission === "granted") {
+      try{
+        navigator.serviceWorker?.ready.then(reg => {
+          reg.showNotification(title, {
+            body,
+            icon: "/assets/PSUFlow-logo.png",
+            vibrate: [100,50,100],
+            tag: "psuflow-approaching",
+            renotify: false
+          });
+        });
+      } catch {
+        try { new Notification(title, { body, icon: "/assets/PSUFlow-logo.png" }); } catch {}
+      }
+    } else {
+      showToast(`${title}: ${body}`);
+    }
+  }
+
+  /* ---------- Page data loading ---------- */
+  function setUpcoming({date,time,dept,person,status, id}){
+    const dateEl = document.getElementById("appt-date");
+    if (date) {
+      dateEl.innerHTML = "<strong>"+niceLong(date)+"</strong>";
+    } else {
+      dateEl.innerHTML = `<strong>${t("no_appointment","No appointment booked")}</strong>`;
+    }
+    document.getElementById("appt-time").textContent = time || "";
+    document.getElementById("appt-dept").textContent = (person ? person+" - " : "") + (dept || "");
+    const statusEl = document.getElementById("appt-status");
+    statusEl.innerHTML = "";
+    if(status) statusEl.appendChild(statusBadge(status));
+    // store "current appointment" context for notifier loop
+    window.__nextAppt = { id, date, time, dept, person, status };
+  }
+
+  async function loadUpcomingFromAPI(){
+    if(!user?.id){ loadLocalFallback(); return; }
+    try{
+      const res = await fetch(`/appointments/my/${user.id}`);
+      if(!res.ok){ if(!loadLocalFallback()) setUpcoming({}); return; }
+      const data = await res.json();
+      const upcoming = (Array.isArray(data)?data:[])
+        .filter(a => a.date && isFutureOrToday(a.date))
+        .sort((x,y)=> (x.date+(x.time||"")).localeCompare(y.date+(y.time||"")));
+      if(upcoming.length){
+        const first = upcoming[0];
+        setUpcoming({
+          id:first.id,
+          date:first.date,
+          time:first.time,
+          dept:first.category || "—",
+          person:first.faculty?.name || first.faculty?.username || "",
+          status:first.status
+        });
+        detectStatusChangeAndAnnounce({ id:first.id, status:first.status });
+      } else if(!loadLocalFallback()){
+        setUpcoming({});
+      }
+    }catch(e){ console.error(e); if(!loadLocalFallback()) setUpcoming({}); }
+  }
+function i18nText(key, fallback, vars){
+  let s = t(key, fallback);
+  if (vars && typeof vars === "object"){
+    for (const [k,v] of Object.entries(vars)){
+      s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    }
+  }
+  return s;
+}
+function asLocaleString(ts){
+  const lang = document.documentElement.lang || undefined;
+  try { return new Date(ts || Date.now()).toLocaleString(lang); }
+  catch { return new Date(ts || Date.now()).toLocaleString(); }
+}
+
+  function loadLocalFallback(){
+    const raw = localStorage.getItem("upcomingAppointment");
+    if(!raw) return false;
+    try{
+      const a = JSON.parse(raw);
+      if(!a?.date || !isFutureOrToday(a.date)) return false;
+      setUpcoming({ id:`local-${a.date}-${a.time}`, date:a.date, time:a.time, dept:a.dept, person:a.person, status:"WAITING" });
+      return true;
+    }catch{ return false; }
+  }
+
+  async function loadQueueStatus() {
+    if (!user?.id) { return; }
+    try {
+      const res = await fetch(`/queue/status/${user.id}`);
+      const deptEl = document.getElementById("queue-dept");
+      const waitingEl = document.getElementById("queue-waiting");
+      const etaEl = document.getElementById("queue-eta");
+
+      if (res.ok) {
+        const data = await res.json();
+        deptEl.textContent = data.department || "—";
+        const waiting = Number(data.waiting || 0);
+        waitingEl.textContent = `${waiting} ${t("waiting","Waiting")}`;
+        etaEl.textContent = data.eta ? `${t("eta","ETA")}: ${data.eta} ${t("minutes_abbr","mins")}` : "";
+        window.__queueWaiting = waiting;
+      } else {
+        deptEl.textContent = t("error_loading_queue","Error loading queue");
+        waitingEl.textContent = "";
+        etaEl.textContent = "";
+      }
+    } catch (e) {
+      console.error(e);
+      document.getElementById("queue-dept").textContent = t("network_error","Network Error");
+      document.getElementById("queue-waiting").textContent = "";
+      document.getElementById("queue-eta").textContent = "";
+    }
+  }
+
+  /* ---------- Approaching turn notifier loop ---------- */
+  function checkAndNotify(){
+    const appt = window.__nextAppt;
+    if (!appt?.date || !appt?.time) return;
+
+    const when = hhmmToDate(appt.date, appt.time);
+    const mins = minsUntil(when);
+    const withinWindow = (mins !== null && mins <= 10 && mins > 0);
+
+    if (withinWindow && !wasNotified("time", `${appt.id}-${appt.date}-${appt.time}`)) {
+      fireNotification(
+        t("appointment_soon_title","Your appointment is soon"),
+        t("appointment_soon_body","Please be ready to join.")
+          .replace("{mins}", String(mins))
+          .replace("{person}", appt.person || t("advisor_generic","advisor"))
+      );
+      markNotified("time", `${appt.id}-${appt.date}-${appt.time}`);
+    }
+
+    const q = Number(window.__queueWaiting || 0);
+    if (q <= 2 && q >= 0 && !wasNotified("queue", `${appt.id}-${appt.date}-${appt.time}`)) {
+      fireNotification(
+        t("almost_up_title","You're almost up!"),
+        t("almost_up_body","Only {count} in front of you. Please be ready.").replace("{count}", String(q))
+      );
+      markNotified("queue", `${appt.id}-${appt.date}-${appt.time}`);
+    }
+  }
+
+  /* ---------- Updates / Notifications UI ---------- */
+  function statusLabel(sRaw){
+    const s = (sRaw||"").toUpperCase();
+    if (s.includes("PROGRESS")) return t("in_progress","In Progress");
+    if (s.includes("COMPLETE") || s.includes("CONFIRM") || s==="APPROVED") return (s==="APPROVED"?t("approved","Approved"):t("completed","Completed"));
+    if (s.includes("CANCEL") || s==="REJECTED") return (s==="REJECTED"?t("rejected","Rejected"):t("canceled","Canceled"));
+    if (s.includes("RESCHED")) return t("rescheduled","Rescheduled");
+    return t("waiting","Waiting");
+  }
+  function titleKeyFromLiteral(s){
+  if (!s) return null;
+  const key = s.toLowerCase().trim();
+  const map = {
+    "appointment approved": "appointment_approved",
+    "appointment rejected": "appointment_rejected",
+    "appointment rescheduled": "appointment_rescheduled",
+    "appointment pending": "appointment_pending"
+  };
+  return map[key] || null;
+}
+
+
+function renderUpdates(list){
+  const ul = document.getElementById("updatesList");
+  const foot = document.getElementById("updatesFoot");
+  ul.innerHTML = "";
+
+  if (!list.length){
+    ul.innerHTML = `<li class="muted">${t("no_updates","No updates yet")}</li>`;
+    foot.textContent = "";
+    return;
+  }
+
+  const lang = document.documentElement.lang || "en";
+
+  list.forEach(n=>{
+    // Expecting either raw strings OR i18n keys from API
+    // Optional `n.vars = { category, date, time, status }`
+const literalKey = titleKeyFromLiteral(n.title);
+const title = n.titleKey
+  ? i18nText(n.titleKey, n.title || t("update","Update"), n.vars)
+  : (literalKey ? t(literalKey, n.title) : (n.title || t("update","Update")));
+
+    // Build a fully localized body if we have structured vars
+    let body;
+    if (n.bodyKey) {
+      body = i18nText(n.bodyKey, n.body || "", n.vars);
+    } else if (n.vars && n.vars.category && n.vars.date && n.vars.time && n.vars.statusKey) {
+      // If backend sends statusKey like "rejected"/"approved" we can compose:
+      const statusLabel = t(n.vars.statusKey, n.vars.status || "");
+      body = i18nText(
+        "update_body_template",
+        "{category} on {date} at {time} was {status}.",
+        {
+          category: n.vars.category,
+          date: n.vars.date,
+          time: n.vars.time,
+          status: statusLabel
+        }
+      );
+    } else {
+      body = (n.body || "");
+      body = body.replace(/^\s*[.،]/, ""); // safety: remove leading dot/comma
+    }
+
+    const li = document.createElement("li");
+    if (!n.read) li.classList.add("unread");
+    li.innerHTML = `
+      <div>
+        <strong>${title}</strong>
+        <div class="small">${body}</div>
+      </div>
+      <span class="time">${asLocaleString(n.createdAt)}</span>
+    `;
+    ul.appendChild(li);
+  });
+
+  foot.textContent = t("tip_click_row","Tip: Newest updates appear first.");
+}
+
+  async function loadNotifications(){
+    if (!user?.id) return;
+    try{
+      const res = await fetch(`/notifications/user/${user.id}`);
+      if (!res.ok) return;
+      const list = await res.json();
+
+      list.sort((a,b)=>
+        (new Date(b.createdAt||0)).getTime() - (new Date(a.createdAt||0)).getTime()
+      );
+
+      renderUpdates(list);
+
+      const firstUnread = list.find(n => !n.read);
+      if (firstUnread){
+        const key = `notif-ping:${firstUnread.id}`;
+        if (!localStorage.getItem(key)){
+          fireNotification(firstUnread.title || t("update","Update"), firstUnread.body || "");
+          localStorage.setItem(key, new Date().toISOString().slice(0,10));
+        }
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  function detectStatusChangeAndAnnounce(currentAppt){
+    if (!currentAppt?.id) return;
+
+    const LS_KEY = "psuflow:lastStatuses";
+    const map = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    const prev = map[currentAppt.id];
+    const now  = currentAppt.status;
+
+    if (now && prev && prev !== now){
+      const nice = statusLabel(now);
+      fireNotification(t("status_changed","Status changed"), `${t("your_appointment","Your appointment")} ${t("is","is")} ${nice}.`);
+      showToast(`${t("status","Status")}: ${nice}`);
+      // also inject a transient top item
+      renderUpdates([{
+        id: `local-${currentAppt.id}-${Date.now()}`,
+        title: t("status_changed","Status changed"),
+        body: `${t("your_appointment","Your appointment")} ${t("is","is")} ${nice}.`,
+        createdAt: new Date().toISOString(),
+        read: false
+      }]);
+    }
+
+    if (now){
+      map[currentAppt.id] = now;
+      localStorage.setItem(LS_KEY, JSON.stringify(map));
+    }
+  }
+
+  // repaint dynamic bits after language changes
+  function paintDynamic(){
+    const appt = window.__nextAppt;
+    if (appt) setUpcoming(appt);
+    loadQueueStatus();
+  }
+
+  // Language switch: set, apply & repaint
+  document.getElementById("langSwitch").addEventListener("change", (e)=>{
+    if (window.PSUi18n){
+      PSUi18n.setLang(e.target.value);
+      PSUi18n.apply(document.body);
+    }
+    paintDynamic();
+    updateNotifyUI();
+  });
+
+  // Poll every minute
+  setInterval(async ()=>{
+    await Promise.all([loadUpcomingFromAPI(), loadQueueStatus(), loadNotifications()]);
+    checkAndNotify();
+  }, 60 * 1000);
+
+  // Initial boot
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{ 
+    localStorage.removeItem("user"); location.href="/login"; 
+  });
+
+  (async function boot(){
+    if (i18nReady?.then) { try { await i18nReady; } catch {} }
+    if (window.PSUi18n) PSUi18n.apply(document.body);
+
+    // keep the language selector in sync with the active language
+    (()=>{
+      const sel = document.getElementById("langSwitch");
+      const active = (PSUi18n?.getLang?.() || document.documentElement.lang || "en");
+      if (sel && sel.value !== active) sel.value = active;
+      document.documentElement.lang = active;
+      document.documentElement.dir  = active === "ar" ? "rtl" : "ltr";
+    })();
+
+    await Promise.all([loadUpcomingFromAPI(), loadQueueStatus(), loadNotifications()]);
+    checkAndNotify();
+    updateNotifyUI();
+  })();
+})();
+</script>
+
+</body>
+</html>

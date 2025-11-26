@@ -1,0 +1,102 @@
+/* Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Full page */
+  body {
+    background-color: #dceeff;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* White login box */
+  .login-container {
+    background-color: #ffffff;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  
+  /* Logo */
+  .login-logo {
+    width: 75px;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
+  /* Title */
+  h2 {
+    font-size: 22px;
+    margin-bottom: 25px;
+    color: #333;
+  }
+  
+  /* Icon + Input */
+  .input-group {
+    display: flex;
+    align-items: center;
+    background-color: #f0f4ff;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .input-group i {
+    color: #888;
+    margin-right: 10px;
+  }
+  
+  .input-group input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+  }
+  
+  /* Radio buttons */
+  .radio-group {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0 20px;
+    font-size: 14px;
+  }
+  
+  /* Button */
+  button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(to right, #007bff, #1e90ff);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  button:hover {
+    background: linear-gradient(to right, #005ce6, #1c86ee);
+  }
+  
+  /* Forgot Password */
+  .forgot-password {
+    display: block;
+    margin-top: 15px;
+    font-size: 13px;
+    color: #1e90ff;
+    text-decoration: none;
+  }
+  
+  .forgot-password:hover {
+    text-decoration: underline;
+  }
